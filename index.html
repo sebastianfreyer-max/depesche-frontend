@@ -221,8 +221,8 @@
       async loadArticles() {
         try {
           // Lade Meldungen vom Backend
-          const res = await fetch('https://depesche-backend.vercel.app/api/articles');
-          if (!res.ok) throw new Error('Backend nicht erreichbar');
+          const res = await fetch('https://depesche-backend-iota.vercel.app/api/articles');
+          if (!res.ok) throw new Error('Backend nicht erreichbar: ' + res.status);
           const data = await res.json();
           this.articles = data.articles || [];
           this.render();
