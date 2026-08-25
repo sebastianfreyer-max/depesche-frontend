@@ -69,7 +69,7 @@
 
     .header {
       border-bottom: 2px solid var(--ink);
-      padding: max(16px, env(safe-area-inset-top)) 16px 16px;
+      padding: calc(env(safe-area-inset-top) + 30px) 16px 16px;
       flex-shrink: 0;
     }
 
@@ -82,12 +82,36 @@
       margin-bottom: 8px;
     }
 
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
     .subtitle {
       font-family: 'Fundamental Brigade', monospace;
       font-size: 0.7rem;
       color: var(--ink-soft);
       letter-spacing: 0.12em;
       text-transform: uppercase;
+    }
+
+    .filter-toggle {
+      font-family: 'Fundamental Brigade', sans-serif;
+      font-size: 0.72rem;
+      background: none;
+      border: 1px solid var(--rule);
+      color: var(--ink-soft);
+      padding: 5px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .filter-toggle.active {
+      border-color: var(--accent);
+      color: var(--accent);
     }
 
     .feed {
@@ -98,13 +122,31 @@
     }
 
     .article-item {
-      padding: 16px;
+      padding: 16px 48px 16px 16px;
       border-bottom: 1px solid var(--rule);
       cursor: pointer;
       transition: background 0.15s;
+      position: relative;
     }
 
     .article-item:active { background: var(--surface); }
+
+    .bookmark-btn {
+      position: absolute;
+      top: 14px;
+      right: 12px;
+      background: none;
+      border: none;
+      font-size: 1.3rem;
+      line-height: 1;
+      color: var(--rule);
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .bookmark-btn.is-saved {
+      color: var(--accent);
+    }
 
     .article-headline {
       font-family: 'Fundamental Brigade', sans-serif;
@@ -129,6 +171,11 @@
       letter-spacing: 0.08em;
     }
 
+    .article-source {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
     /* Detail View */
     .detail-view {
       display: none;
@@ -146,9 +193,16 @@
     .detail-view.active { display: flex; }
 
     .detail-header {
-      padding: max(16px, env(safe-area-inset-top)) 16px 16px;
+      padding: calc(env(safe-area-inset-top) + 30px) 16px 16px;
       border-bottom: 1px solid var(--rule);
       flex-shrink: 0;
+    }
+
+    .detail-header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
     }
 
     .detail-back {
@@ -158,10 +212,26 @@
       border: none;
       cursor: pointer;
       color: var(--accent);
-      margin-bottom: 12px;
+      margin-bottom: 0;
     }
 
     .detail-back:active { text-decoration: underline; }
+
+    .detail-save {
+      font-family: 'Fundamental Brigade', sans-serif;
+      font-size: 0.8rem;
+      background: none;
+      border: 1px solid var(--rule);
+      color: var(--ink-soft);
+      padding: 5px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    .detail-save.is-saved {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
 
     .detail-headline {
       font-family: 'Fundamental Brigade', sans-serif;
@@ -176,6 +246,11 @@
       font-size: 0.7rem;
       color: var(--ink-soft);
       letter-spacing: 0.08em;
+    }
+
+    .detail-source {
+      color: var(--accent);
+      font-weight: 500;
     }
 
     .detail-scroll {
@@ -218,23 +293,27 @@
       color: var(--ink);
     }
 
-    .detail-ask-claude {
-      display: block;
-      width: 100%;
-      font-family: 'Fundamental Brigade', sans-serif;
-      font-weight: 700;
-      font-size: 0.95rem;
+    .claude-fab {
+      position: fixed;
+      right: calc(18px + env(safe-area-inset-right));
+      bottom: calc(20px + env(safe-area-inset-bottom));
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
       background: var(--ink);
-      color: var(--paper);
+      color: var(--accent);
       border: none;
-      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
-      margin-bottom: 40px;
-      border-radius: 2px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+      z-index: 1100;
     }
 
-    .detail-ask-claude:active {
+    .claude-fab:active {
       background: var(--accent);
+      color: var(--ink);
     }
 
     .loading {
@@ -258,7 +337,23 @@
       constructor() {
         this.articles = [];
         this.selectedArticle = null;
+        this.showSavedOnly = false;
+        this.savedIds = new Set(JSON.parse(localStorage.getItem('depesche_saved') || '[]'));
         this.init();
+      }
+
+      articleId(article) {
+        return article.link || (article.source + '|' + article.headline);
+      }
+
+      toggleSave(id) {
+        if (this.savedIds.has(id)) {
+          this.savedIds.delete(id);
+        } else {
+          this.savedIds.add(id);
+        }
+        localStorage.setItem('depesche_saved', JSON.stringify([...this.savedIds]));
+        this.render();
       }
 
       async init() {
@@ -321,12 +416,17 @@
             return;
           }
 
+          const isSaved = this.savedIds.has(this.articleId(article));
+
           app.innerHTML = `
             <div class="detail-view active">
               <div class="detail-header">
-                <button class="detail-back">← Zurück</button>
+                <div class="detail-header-top">
+                  <button class="detail-back">← Zurück</button>
+                  <button class="detail-save${isSaved ? ' is-saved' : ''}" data-save-detail="1">${isSaved ? '★ Gemerkt' : '☆ Merken'}</button>
+                </div>
                 <h1 class="detail-headline">${article.headline}</h1>
-                <div class="detail-meta">${article.source || 'Quelle'} · ${article.date || 'Datum'}</div>
+                <div class="detail-meta"><span class="detail-source">${article.source || 'Quelle'}</span> · ${article.date || 'Datum'}</div>
               </div>
               <div class="detail-scroll">
                 <div class="detail-content">
@@ -338,32 +438,48 @@
                       ${article.link ? `<a href="${article.link}" target="_blank" style="color: var(--accent);">Zum Originalartikel bei ${article.source} →</a>` : 'Quelle: ' + article.source}
                     </div>
                   </div>
-                  <button class="detail-ask-claude" data-ask="${index}">Mit Claude besprechen →</button>
                 </div>
               </div>
+              <button class="claude-fab" data-ask="1" aria-label="Mit Claude besprechen" title="Mit Claude besprechen">
+                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2 L14.2 9.8 L22 12 L14.2 14.2 L12 22 L9.8 14.2 L2 12 L9.8 9.8 Z" fill="currentColor"/>
+                </svg>
+              </button>
             </div>
           `;
           
           document.querySelector('.detail-back').addEventListener('click', () => this.closeDetail());
           const askBtn = document.querySelector('[data-ask]');
           if (askBtn) askBtn.addEventListener('click', () => this.askClaude(this.selectedArticle));
+          const saveDetailBtn = document.querySelector('[data-save-detail]');
+          if (saveDetailBtn) saveDetailBtn.addEventListener('click', () => this.toggleSave(this.articleId(article)));
         } else {
           // List View
-          const articlesHtml = this.articles.length > 0
-            ? this.articles.map((article, i) => `
+          const visibleArticles = this.showSavedOnly
+            ? this.articles.map((a, i) => ({ a, i })).filter(({ a }) => this.savedIds.has(this.articleId(a)))
+            : this.articles.map((a, i) => ({ a, i }));
+
+          const articlesHtml = visibleArticles.length > 0
+            ? visibleArticles.map(({ a: article, i }) => {
+                const saved = this.savedIds.has(this.articleId(article));
+                return `
               <div class="article-item" data-index="${i}">
+                <button class="bookmark-btn${saved ? ' is-saved' : ''}" data-save="${i}" aria-label="Merken">${saved ? '★' : '☆'}</button>
                 <div class="article-headline">${article.headline}</div>
                 <div class="article-summary">${article.summary}</div>
-                <div class="article-meta">${article.source || 'Quelle'} · ${article.date || 'Datum'}</div>
+                <div class="article-meta"><span class="article-source">${article.source || 'Quelle'}</span> · ${article.date || 'Datum'}</div>
               </div>
-            `).join('')
-            : '<div class="empty">Keine Meldungen verfügbar. Bitte später versuchen.</div>';
+            `;}).join('')
+            : `<div class="empty">${this.showSavedOnly ? 'Noch keine gemerkten Artikel.' : 'Keine Meldungen verfügbar. Bitte später versuchen.'}</div>`;
 
           app.innerHTML = `
             <div id="app-inner" style="display: flex; flex-direction: column; height: 100%;">
               <div class="header">
                 <h1 class="title">DEPESCHE</h1>
-                <div class="subtitle">Internationale KI-News, täglich kuriert</div>
+                <div class="header-row">
+                  <div class="subtitle">Internationale KI-News, täglich kuriert</div>
+                  <button class="filter-toggle${this.showSavedOnly ? ' active' : ''}" data-toggle-saved="1">${this.showSavedOnly ? '★ Gemerkt' : '☆ Gemerkt'}</button>
+                </div>
               </div>
               <div class="feed">${articlesHtml}</div>
             </div>
@@ -371,10 +487,23 @@
 
           // Attach listeners
           document.querySelectorAll('.article-item').forEach((item) => {
-            item.addEventListener('click', () => {
+            item.addEventListener('click', (e) => {
+              if (e.target.closest('.bookmark-btn')) return;
               const index = parseInt(item.dataset.index);
               this.selectArticle(index);
             });
+          });
+          document.querySelectorAll('[data-save]').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const idx = parseInt(btn.dataset.save);
+              this.toggleSave(this.articleId(this.articles[idx]));
+            });
+          });
+          const toggleBtn = document.querySelector('[data-toggle-saved]');
+          if (toggleBtn) toggleBtn.addEventListener('click', () => {
+            this.showSavedOnly = !this.showSavedOnly;
+            this.render();
           });
         }
       }
