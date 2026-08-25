@@ -69,7 +69,13 @@
       transition: background 0.2s, color 0.2s;
     }
 
-    #app { display: flex; flex-direction: column; height: 100%; }
+    #app { display: flex; flex-direction: column; height: 100%; position: relative; }
+
+    #list-view {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
 
     .header {
       border-bottom: 2px solid var(--ink);
@@ -347,7 +353,16 @@
         this.selectedArticle = null;
         this.showSavedOnly = false;
         this.savedIds = new Set(JSON.parse(localStorage.getItem('depesche_saved') || '[]'));
+        this.mountSkeleton();
         this.init();
+      }
+
+      mountSkeleton() {
+        document.getElementById('app').innerHTML = `
+          <div id="list-view"></div>
+          <div class="detail-view" id="detail-view"></div>
+        `;
+        this.attachSwipeBack(document.getElementById('detail-view'));
       }
 
       articleId(article) {
@@ -361,11 +376,12 @@
           this.savedIds.add(id);
         }
         localStorage.setItem('depesche_saved', JSON.stringify([...this.savedIds]));
-        this.render();
+        this.renderList();
+        if (this.selectedArticle !== null) this.renderDetail();
       }
 
       async init() {
-        this.render();
+        this.renderList();
         await this.loadArticles();
       }
 
@@ -376,22 +392,27 @@
           if (!res.ok) throw new Error('Backend nicht erreichbar: ' + res.status);
           const data = await res.json();
           this.articles = data.articles || [];
-          this.render();
+          this.renderList();
         } catch (e) {
           console.error('Fehler beim Laden:', e.message);
           this.articles = [];
-          this.render();
+          this.renderList();
         }
       }
 
       selectArticle(index) {
         this.selectedArticle = index;
-        this.render();
+        this.renderDetail();
       }
 
       closeDetail() {
         this.selectedArticle = null;
-        this.render();
+        const el = document.getElementById('detail-view');
+        if (!el) return;
+        el.classList.remove('active');
+        el.style.transition = 'none';
+        el.style.transform = '';
+        requestAnimationFrame(() => { el.style.transition = ''; });
       }
 
       attachSwipeBack(el) {
@@ -443,6 +464,7 @@
             setTimeout(() => this.closeDetail(), 200);
           } else {
             el.style.transform = 'translateX(0)';
+            setTimeout(() => { el.style.transition = ''; }, 220);
           }
         };
 
@@ -471,108 +493,115 @@
         }
       }
 
-      render() {
-        const app = document.getElementById('app');
-        
-        if (this.selectedArticle !== null) {
-          // Detail View
-          const article = this.articles[this.selectedArticle];
-          if (!article) {
-            app.innerHTML = '<div class="empty">Artikel nicht gefunden</div>';
-            return;
-          }
+      renderDetail() {
+        const detailEl = document.getElementById('detail-view');
+        if (!detailEl) return;
 
-          const isSaved = this.savedIds.has(this.articleId(article));
-
-          app.innerHTML = `
-            <div class="detail-view active">
-              <div class="detail-header">
-                <div class="detail-header-top">
-                  <button class="detail-back">← Zurück</button>
-                  <button class="detail-save${isSaved ? ' is-saved' : ''}" data-save-detail="1">${isSaved ? '★ Gemerkt' : '☆ Merken'}</button>
-                </div>
-                <h1 class="detail-headline">${article.headline}</h1>
-                <div class="detail-meta"><span class="detail-source">${article.source || 'Quelle'}</span> · ${article.date || 'Datum'}</div>
-              </div>
-              <div class="detail-scroll">
-                <div class="detail-content">
-                  <p style="font-style: italic; color: var(--ink-soft); font-size: 0.82rem;">Schlagzeile & Kurzfassung auf Deutsch übersetzt · Originaltext unten auf Englisch</p>
-                  ${article.content ? article.content.split('\n').map(p => `<p>${p}</p>`).join('') : '<p>' + article.summary + '</p>'}
-                  <div class="detail-fazit">
-                    <div class="detail-fazit-label">Weiterlesen</div>
-                    <div class="detail-fazit-text">
-                      ${article.link ? `<a href="${article.link}" target="_blank" style="color: var(--accent);">Zum Originalartikel bei ${article.source} →</a>` : 'Quelle: ' + article.source}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <button class="claude-fab" data-ask="1" aria-label="Mit Claude besprechen" title="Mit Claude besprechen">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2 L14.2 9.8 L22 12 L14.2 14.2 L12 22 L9.8 14.2 L2 12 L9.8 9.8 Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-                </svg>
-              </button>
-            </div>
-          `;
-          
-          document.querySelector('.detail-back').addEventListener('click', () => this.closeDetail());
-          this.attachSwipeBack(document.querySelector('.detail-view'));
-          const askBtn = document.querySelector('[data-ask]');
-          if (askBtn) askBtn.addEventListener('click', () => this.askClaude(this.selectedArticle));
-          const saveDetailBtn = document.querySelector('[data-save-detail]');
-          if (saveDetailBtn) saveDetailBtn.addEventListener('click', () => this.toggleSave(this.articleId(article)));
-        } else {
-          // List View
-          const visibleArticles = this.showSavedOnly
-            ? this.articles.map((a, i) => ({ a, i })).filter(({ a }) => this.savedIds.has(this.articleId(a)))
-            : this.articles.map((a, i) => ({ a, i }));
-
-          const articlesHtml = visibleArticles.length > 0
-            ? visibleArticles.map(({ a: article, i }) => {
-                const saved = this.savedIds.has(this.articleId(article));
-                return `
-              <div class="article-item" data-index="${i}">
-                <button class="bookmark-btn${saved ? ' is-saved' : ''}" data-save="${i}" aria-label="Merken">${saved ? '★' : '☆'}</button>
-                <div class="article-headline">${article.headline}</div>
-                <div class="article-summary">${article.summary}</div>
-                <div class="article-meta"><span class="article-source">${article.source || 'Quelle'}</span> · ${article.date || 'Datum'}</div>
-              </div>
-            `;}).join('')
-            : `<div class="empty">${this.showSavedOnly ? 'Noch keine gemerkten Artikel.' : 'Keine Meldungen verfügbar. Bitte später versuchen.'}</div>`;
-
-          app.innerHTML = `
-            <div id="app-inner" style="display: flex; flex-direction: column; height: 100%;">
-              <div class="header">
-                <h1 class="title">DEPESCHE</h1>
-                <div class="header-row">
-                  <div class="subtitle">Internationale KI-News, täglich kuriert</div>
-                  <button class="filter-toggle${this.showSavedOnly ? ' active' : ''}" data-toggle-saved="1">${this.showSavedOnly ? '★ Gemerkt' : '☆ Gemerkt'}</button>
-                </div>
-              </div>
-              <div class="feed">${articlesHtml}</div>
-            </div>
-          `;
-
-          // Attach listeners
-          document.querySelectorAll('.article-item').forEach((item) => {
-            item.addEventListener('click', (e) => {
-              if (e.target.closest('.bookmark-btn')) return;
-              const index = parseInt(item.dataset.index);
-              this.selectArticle(index);
-            });
-          });
-          document.querySelectorAll('[data-save]').forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const idx = parseInt(btn.dataset.save);
-              this.toggleSave(this.articleId(this.articles[idx]));
-            });
-          });
-          const toggleBtn = document.querySelector('[data-toggle-saved]');
-          if (toggleBtn) toggleBtn.addEventListener('click', () => {
-            this.showSavedOnly = !this.showSavedOnly;
-            this.render();
-          });
+        if (this.selectedArticle === null) {
+          detailEl.classList.remove('active');
+          return;
         }
+
+        const article = this.articles[this.selectedArticle];
+        if (!article) {
+          detailEl.classList.remove('active');
+          return;
+        }
+
+        const isSaved = this.savedIds.has(this.articleId(article));
+
+        detailEl.innerHTML = `
+          <div class="detail-header">
+            <div class="detail-header-top">
+              <button class="detail-back">← Zurück</button>
+              <button class="detail-save${isSaved ? ' is-saved' : ''}" data-save-detail="1">${isSaved ? '★ Gemerkt' : '☆ Merken'}</button>
+            </div>
+            <h1 class="detail-headline">${article.headline}</h1>
+            <div class="detail-meta"><span class="detail-source">${article.source || 'Quelle'}</span> · ${article.date || 'Datum'}</div>
+          </div>
+          <div class="detail-scroll">
+            <div class="detail-content">
+              <p style="font-style: italic; color: var(--ink-soft); font-size: 0.82rem;">Schlagzeile & Kurzfassung auf Deutsch übersetzt · Originaltext unten auf Englisch</p>
+              ${article.content ? article.content.split('\n').map(p => `<p>${p}</p>`).join('') : '<p>' + article.summary + '</p>'}
+              <div class="detail-fazit">
+                <div class="detail-fazit-label">Weiterlesen</div>
+                <div class="detail-fazit-text">
+                  ${article.link ? `<a href="${article.link}" target="_blank" style="color: var(--accent);">Zum Originalartikel bei ${article.source} →</a>` : 'Quelle: ' + article.source}
+                </div>
+              </div>
+            </div>
+          </div>
+          <button class="claude-fab" data-ask="1" aria-label="Mit Claude besprechen" title="Mit Claude besprechen">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2 L14.2 9.8 L22 12 L14.2 14.2 L12 22 L9.8 14.2 L2 12 L9.8 9.8 Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        `;
+
+        detailEl.style.transition = 'none';
+        detailEl.style.transform = '';
+        detailEl.classList.add('active');
+        requestAnimationFrame(() => { detailEl.style.transition = ''; });
+
+        detailEl.querySelector('.detail-back').addEventListener('click', () => this.closeDetail());
+        const askBtn = detailEl.querySelector('[data-ask]');
+        if (askBtn) askBtn.addEventListener('click', () => this.askClaude(this.selectedArticle));
+        const saveDetailBtn = detailEl.querySelector('[data-save-detail]');
+        if (saveDetailBtn) saveDetailBtn.addEventListener('click', () => this.toggleSave(this.articleId(article)));
+      }
+
+      renderList() {
+        const listEl = document.getElementById('list-view');
+        if (!listEl) return;
+
+        const visibleArticles = this.showSavedOnly
+          ? this.articles.map((a, i) => ({ a, i })).filter(({ a }) => this.savedIds.has(this.articleId(a)))
+          : this.articles.map((a, i) => ({ a, i }));
+
+        const articlesHtml = visibleArticles.length > 0
+          ? visibleArticles.map(({ a: article, i }) => {
+              const saved = this.savedIds.has(this.articleId(article));
+              return `
+            <div class="article-item" data-index="${i}">
+              <button class="bookmark-btn${saved ? ' is-saved' : ''}" data-save="${i}" aria-label="Merken">${saved ? '★' : '☆'}</button>
+              <div class="article-headline">${article.headline}</div>
+              <div class="article-summary">${article.summary}</div>
+              <div class="article-meta"><span class="article-source">${article.source || 'Quelle'}</span> · ${article.date || 'Datum'}</div>
+            </div>
+          `;}).join('')
+          : `<div class="empty">${this.showSavedOnly ? 'Noch keine gemerkten Artikel.' : 'Keine Meldungen verfügbar. Bitte später versuchen.'}</div>`;
+
+        listEl.innerHTML = `
+          <div class="header">
+            <h1 class="title">DEPESCHE</h1>
+            <div class="header-row">
+              <div class="subtitle">Internationale KI-News, täglich kuriert</div>
+              <button class="filter-toggle${this.showSavedOnly ? ' active' : ''}" data-toggle-saved="1">${this.showSavedOnly ? '★ Gemerkt' : '☆ Gemerkt'}</button>
+            </div>
+          </div>
+          <div class="feed">${articlesHtml}</div>
+        `;
+
+        // Attach listeners
+        listEl.querySelectorAll('.article-item').forEach((item) => {
+          item.addEventListener('click', (e) => {
+            if (e.target.closest('.bookmark-btn')) return;
+            const index = parseInt(item.dataset.index);
+            this.selectArticle(index);
+          });
+        });
+        listEl.querySelectorAll('[data-save]').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(btn.dataset.save);
+            this.toggleSave(this.articleId(this.articles[idx]));
+          });
+        });
+        const toggleBtn = listEl.querySelector('[data-toggle-saved]');
+        if (toggleBtn) toggleBtn.addEventListener('click', () => {
+          this.showSavedOnly = !this.showSavedOnly;
+          this.renderList();
+        });
       }
     }
 
