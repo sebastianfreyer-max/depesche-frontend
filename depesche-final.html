@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="DEPESCHE">
+  <title>DEPESCHE – KI-Briefing</title>
+  <style>
+    @font-face {
+      font-family: 'Fundamental Brigade';
+      src: url(data:font/ttf;base64,AAEAAAARAQAABAAQTFRTSDTFa9YAATyYAAABY09TLzI08RpIAAABmAAAAGBWRE1Y8qbc8wABXgAAAAu6Y21hcIDsiqIAAAd0AAAH4mN2dCAAKgP2AAAQ5AAAABJmcGdtBlicNgAAD1gAAAFzZ2x5ZuUbPksAABD4AAESuGhkbXhevvE5AAE9/AAAIARoZWFk+tWliQAAARwAAAA2aGhlYQe8BG8AAAFUAAAAJGhtdHh3vyLjAAAB+AAABXxrZXJuNYw1UgABJnAAAAT4bG9jYZtd39AAASOwAAACwG1heHADdwNrAAABeAAAACBuYW1lDqKYDgABK2gAAAo0cG9zdLabdYQAATWcAAAG+XByZXAc/32cAAAQzAAAABYAAQAAAAAAAEOeUhFfDzz1ABsD6AAAAADL2fXgAAAAAMvdbAb/zf8WBCQDqAAAAAgAAQAAAAAAAAABAAADrf8WABsEM//N/8YEJAABAAAAAAAAAAAAAAAAAAABXwABAAABXwBnAAcASgAEAAEAAAAAAAoAAAIAArgAAgABAAMBzwGQAAUAAAAAAAAAAAAAAAAAAAAAAAAAMgD6AAACCwYDBQMCAgIEoAACL1AAAAoAAAAAAAAAACAgICAAQAAg+wUCx/9rADUDrQDqAAAABQAAAAABwALLAAAAIAAAAZ0AMgJZAA8DVgANAlYADwJeAA8CdgAdAl4ADwJpAA8CWQAPAdAAJgImABQD6AAAAhIADAJcACUBuAAmAbwAJgHBACYBvAAmAbkAJgJpABYCRQAMAYgAJgMEABkCJQAlALAAJQD3//sA9//7APf/zQD3AAkA1AAPAfgAJgF0ACYCwgAmAjkAJwAAAAACQwAnAwgAGAQkABsDCQAYAwwAGAMTAB4DDAAYAw0AGwMJABgBtgAmAxoAGAHtACYB4AAZAgsAGQHWAA8BswAmAhsAIQIZACECJgAhAh4AIwIUACECGwAPA2YAGAIAABoBvAAOAdgADgHYAA4B8QAbAigAGwHkABsB4QAbAd4AGwDNAFEB7AAbA0oAHgHZABsCIwAZAh4AGwEnABIBegAdAWIAFQLUABgB5gAbAdEAJwDQAAcAowAjAPUABwD0ACUAvAAnAL0AIgCbACMA9QAYAZUAFwL6AA8C+QAPASYAEwF+AA0ArQALAYIADgEnABIAkgAnALEADQMHABgCAP/2AdEACAI2AAQCOQAFAPoAGwFqAGYBeQAdAZcAEgCjACMB/AAaAigAGgIoABoCAgAaAigAGgIZABoCfgAjAiAAIwGOACMBfAAjAfYAGgCcACcAowAjAOEADgKLABsBgwAOAbUAFwG8ABcCawAaAnkAGwGFABUCEAAVAZYAFgDlABACAAAFAd8AGQIUACMBzgAkAMX/2wD8ABkBbgAaAW4AIgDOAA8AzwAcAaYAJwEAACcAqQAnAM0ACwEZAAsBRQARAMUADQC9AAoBowAnAKkAJwFOACMA/AALAXQ,AAEAAAARAQAABAAQTFRTSDTFa9YAATyYAAABY09TLzI08RpIAAABmAAAAGBWRE1Y8qbc8wABXgAAAAu6Y21hcIDsiqIAAAd0AAAH4mN2dCAAKgP2AAAQ5AAAABJmcGdtBlicNgAAD1gAAAFzZ2x5ZuUbPksAABD4AAESuGhkbXhevvE5AAE9/AAAIARoZWFk+tWliQAAARwAAAA2aGhlYQe8BG8AAAFUAAAAJGhtdHh3vyLjAAAB+AAABXxrZXJuNYw1UgABJnAAAAT4bG9jYZtd39AAASOwAAACwG1heHADdwNrAAABeAAAACBuYW1lDqKYDgABK2gAAAo0cG9zdLabdYQAATWcAAAG+XByZXAc/32cAAAQzAAAABYAAQAAAAAAAEOeUhFfDzz1ABsD6AAAAADL2fXgAAAAAMvdbAb/zf8WBCQDqAAAAAgAAQAAAAAAAAABAAADrf8WABsEM//N/8YEJAABAAAAAAAAAAAAAAAAAAABXwABAAABXwBnAAcASgAEAAEAAAAAAAoAAAIAArgAAgABAAMBzwGQAAUAAAAAAAAAAAAAAAAAAAAAAAAAMgD6AAACCwYDBQMCAgIEoAACL1AAAAoAAAAAAAAAACAgICAAQAAg+wUCx/9rADUDrQDqAAAABQAAAAABwALLAAAAIAAAAZ0AMgJZAA8DVgANAlYADwJeAA8CdgAdAl4ADwJpAA8CWQAPAdAAJgImABQD6AAAAhIADAJcACUBuAAmAbwAJgHBACYBvAAmAbkAJgJpABYCRQAMAYgAJgMEABkCJQAlALAAJQD3//sA9//7APf/zQD3AAkA1AAPAfgAJgF0ACYCwgAmAjkAJwAAAAACQwAnAwgAGAQkABsDCQAYAwwAGAMTAB4DDAAYAw0AGwMJABgBtgAmAxoAGAHtACYB4AAZAgsAGQHWAA8BswAmAhsAIQIZACECJgAhAh4AIwIUACECGwAPA2YAGAIAABoBvAAOAdgADgHYAA4B8QAbAigAGwHkABsB4QAbAd4AGwDNAFEB7AAbA0oAHgHZABsCIwAZAh4AGwEnABIBegAdAWIAFQLUABgB5gAbAdEAJwDQAAcAowAjAPUABwD0ACUAvAAnAL0AIgCbACMA9QAYAZUAFwL6AA8C+QAPASYAEwF+AA0ArQALAYIADgEnABIAkgAnALEADQMHABgCAP/2AdEACAI2AAQCOQAFAPoAGwFqAGYBeQAdAZcAEgCjACMB/AAaAigAGgIoABoCAgAaAigAGgIZABoCfgAjAiAAIwGOACMBfAAjAfYAGgCcACcAowAjAOEADgKLABsBgwAOAbUAFwG8ABcCawAaAnkAGwGFABUCEAAVAZYAFgDlABACAAAFAd8AGQIUACMBzgAkAMX/2wD8ABkBbgAaAW4AIgDOAA8AzwAcAaYAJwEAACcAqQAnAM0ACwEZAAsBRQARAMUADQC9AAoBowAnAKkAJwFOACMA/AALAXQ) format('truetype');
+      font-weight: 400;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Fundamental Brigade';
+      src: url(data:font/ttf;base64,AAEAAAALAIAAAwAwT1MvMJFAUqIAAADMAAAAVmNtYXCX7tO3AAABHAAAAEZnbHlmY9D8vgAAASAAAACkaGVhZGS2iVoAAADQAAAANmhoZWENBwC7AAAA7AAAACRobXR4D+oAkAAAAYAAAAAMbG9jYQMOA2gAAAGcAAAACG1heHABBgBoAAABqAAAACBuYW1lT01M/wAAAbgAAAFacG9zdAbLAGEAAAIIAAAAIAABAAAAAwAAAwAAEAAAAQAAFgD8/2QACwD6AAAAAAAAA5sAFgD6AAAAFgD6AAAAAAAAAA==) format('truetype');
+      font-weight: 700;
+      font-display: swap;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+
+    body {
+      background: #F1F0EC;
+      color: #1B1A17;
+      font-family: 'Fundamental Brigade', Georgia, serif;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    #app { display: flex; flex-direction: column; height: 100%; }
+
+    .header {
+      border-bottom: 2px solid #1B1A17;
+      padding: max(16px, env(safe-area-inset-top)) 16px 16px;
+      flex-shrink: 0;
+    }
+
+    .title {
+      font-family: 'Fundamental Brigade', sans-serif;
+      font-weight: 700;
+      font-size: 2.5rem;
+      letter-spacing: -0.03em;
+      line-height: 0.92;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-family: 'Fundamental Brigade', monospace;
+      font-size: 0.7rem;
+      color: #57544E;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .feed {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 0;
+    }
+
+    .article-item {
+      padding: 16px;
+      border-bottom: 1px solid #D9D7CF;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .article-item:active { background: #FBFBF9; }
+
+    .article-headline {
+      font-family: 'Fundamental Brigade', sans-serif;
+      font-weight: 700;
+      font-size: 1.05rem;
+      line-height: 1.2;
+      margin-bottom: 8px;
+      color: #1B1A17;
+    }
+
+    .article-summary {
+      font-size: 0.9rem;
+      color: #57544E;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .article-meta {
+      font-family: 'Fundamental Brigade', monospace;
+      font-size: 0.65rem;
+      color: #999;
+      letter-spacing: 0.08em;
+    }
+
+    /* Detail View */
+    .detail-view {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #F1F0EC;
+      z-index: 1000;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .detail-view.active { display: flex; }
+
+    .detail-header {
+      padding: max(16px, env(safe-area-inset-top)) 16px 16px;
+      border-bottom: 1px solid #D9D7CF;
+      flex-shrink: 0;
+    }
+
+    .detail-back {
+      font-family: 'Fundamental Brigade', sans-serif;
+      font-size: 0.9rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: rgb(230, 117, 117);
+      margin-bottom: 12px;
+    }
+
+    .detail-back:active { text-decoration: underline; }
+
+    .detail-headline {
+      font-family: 'Fundamental Brigade', sans-serif;
+      font-weight: 700;
+      font-size: 1.35rem;
+      line-height: 1.25;
+      margin-bottom: 12px;
+    }
+
+    .detail-meta {
+      font-family: 'Fundamental Brigade', monospace;
+      font-size: 0.7rem;
+      color: #57544E;
+      letter-spacing: 0.08em;
+    }
+
+    .detail-scroll {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 0 16px;
+    }
+
+    .detail-content {
+      padding: 16px 0;
+      line-height: 1.6;
+      color: #34322D;
+    }
+
+    .detail-content p {
+      margin-bottom: 12px;
+    }
+
+    .detail-fazit {
+      background: rgba(230, 117, 117, 0.1);
+      border-left: 3px solid rgb(230, 117, 117);
+      padding: 14px;
+      margin: 20px 0 40px;
+      border-radius: 2px;
+    }
+
+    .detail-fazit-label {
+      font-family: 'Fundamental Brigade', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: rgb(230, 117, 117);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .detail-fazit-text {
+      font-size: 0.95rem;
+      color: #1B1A17;
+    }
+
+    .loading {
+      padding: 20px;
+      text-align: center;
+      color: rgb(230, 117, 117);
+    }
+
+    .empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: #57544E;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    class Depesche {
+      constructor() {
+        this.articles = [];
+        this.selectedArticle = null;
+        this.apiKey = localStorage.getItem('depesche_api_key');
+        this.init();
+      }
+
+      async init() {
+        this.render();
+        await this.loadArticles();
+      }
+
+      async loadArticles() {
+        try {
+          // Lade Meldungen vom Backend
+          const res = await fetch('https://depesche-backend-iota.vercel.app/api/articles');
+          if (!res.ok) throw new Error('Backend nicht erreichbar: ' + res.status);
+          const data = await res.json();
+          this.articles = data.articles || [];
+          this.render();
+        } catch (e) {
+          console.error('Fehler beim Laden:', e.message);
+          this.articles = [];
+          this.render();
+        }
+      }
+
+      selectArticle(index) {
+        this.selectedArticle = index;
+        this.render();
+      }
+
+      closeDetail() {
+        this.selectedArticle = null;
+        this.render();
+      }
+
+      async askClaude(articleIndex) {
+        if (!this.apiKey) {
+          this.showKeySetup();
+          return;
+        }
+        // Chat-Funktion kommt später
+        alert('Chat-Funktion – kommt bald!');
+      }
+
+      showKeySetup() {
+        const key = prompt('Gib deinen Anthropic API-Key ein (sk-ant-...):');
+        if (key) {
+          localStorage.setItem('depesche_api_key', key);
+          this.apiKey = key;
+        }
+      }
+
+      render() {
+        const app = document.getElementById('app');
+        
+        if (this.selectedArticle !== null) {
+          // Detail View
+          const article = this.articles[this.selectedArticle];
+          if (!article) {
+            app.innerHTML = '<div class="empty">Artikel nicht gefunden</div>';
+            return;
+          }
+
+          app.innerHTML = `
+            <div class="detail-view active">
+              <div class="detail-header">
+                <button class="detail-back">← Zurück</button>
+                <h1 class="detail-headline">${article.headline}</h1>
+                <div class="detail-meta">${article.source || 'Quelle'} · ${article.date || 'Datum'}</div>
+              </div>
+              <div class="detail-scroll">
+                <div class="detail-content">
+                  ${article.content ? article.content.split('\n').map(p => `<p>${p}</p>`).join('') : '<p>' + article.summary + '</p>'}
+                  <div class="detail-fazit">
+                    <div class="detail-fazit-label">Fazit</div>
+                    <div class="detail-fazit-text">${article.conclusion || article.summary}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          document.querySelector('.detail-back').addEventListener('click', () => this.closeDetail());
+        } else {
+          // List View
+          const articlesHtml = this.articles.length > 0
+            ? this.articles.map((article, i) => `
+              <div class="article-item" data-index="${i}">
+                <div class="article-headline">${article.headline}</div>
+                <div class="article-summary">${article.summary}</div>
+                <div class="article-meta">${article.source || 'Quelle'} · ${article.date || 'Datum'}</div>
+              </div>
+            `).join('')
+            : '<div class="empty">Keine Meldungen verfügbar. Bitte später versuchen.</div>';
+
+          app.innerHTML = `
+            <div id="app-inner" style="display: flex; flex-direction: column; height: 100%;">
+              <div class="header">
+                <h1 class="title">DEPESCHE</h1>
+                <div class="subtitle">Internationale KI-News, täglich kuriert</div>
+              </div>
+              <div class="feed">${articlesHtml}</div>
+            </div>
+          `;
+
+          // Attach listeners
+          document.querySelectorAll('.article-item').forEach((item) => {
+            item.addEventListener('click', () => {
+              const index = parseInt(item.dataset.index);
+              this.selectArticle(index);
+            });
+          });
+        }
+      }
+    }
+
+    new Depesche();
+  </script>
+</body>
+</html>
