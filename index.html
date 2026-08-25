@@ -32,6 +32,8 @@
       --accent: rgb(230, 117, 117);
       --accent-wash: rgba(230, 117, 117, 0.1);
       --meta-grey: #999;
+      --glass-bg: rgba(255, 255, 255, 0.45);
+      --glass-border: rgba(27, 26, 23, 0.16);
       color-scheme: light dark;
     }
 
@@ -46,6 +48,8 @@
         --accent: rgb(235, 140, 140);
         --accent-wash: rgba(235, 140, 140, 0.14);
         --meta-grey: #8A8680;
+        --glass-bg: rgba(32, 31, 28, 0.4);
+        --glass-border: rgba(241, 240, 236, 0.22);
       }
     }
 
@@ -300,20 +304,23 @@
       width: 54px;
       height: 54px;
       border-radius: 50%;
-      background: var(--ink);
+      background: var(--glass-bg);
+      backdrop-filter: blur(18px) saturate(160%);
+      -webkit-backdrop-filter: blur(18px) saturate(160%);
       color: var(--accent);
-      border: none;
+      border: 1.3px solid var(--glass-border);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+      box-shadow: 0 4px 18px rgba(0,0,0,0.12);
       z-index: 1100;
+      transition: transform 0.12s;
     }
 
     .claude-fab:active {
-      background: var(--accent);
-      color: var(--ink);
+      transform: scale(0.92);
+      border-color: var(--accent);
     }
 
     .loading {
@@ -386,6 +393,34 @@
         this.render();
       }
 
+      attachSwipeBack(el) {
+        if (!el) return;
+        let startX = null, startY = null, tracking = false;
+
+        el.addEventListener('touchstart', (e) => {
+          const t = e.touches[0];
+          if (t.clientX < 28) {
+            startX = t.clientX;
+            startY = t.clientY;
+            tracking = true;
+          } else {
+            tracking = false;
+          }
+        }, { passive: true });
+
+        el.addEventListener('touchend', (e) => {
+          if (!tracking || startX === null) return;
+          const t = e.changedTouches[0];
+          const dx = t.clientX - startX;
+          const dy = Math.abs(t.clientY - startY);
+          if (dx > 70 && dy < 60) {
+            this.closeDetail();
+          }
+          tracking = false;
+          startX = null;
+        }, { passive: true });
+      }
+
       askClaude(articleIndex) {
         const article = this.articles[articleIndex];
         if (!article) return;
@@ -441,14 +476,15 @@
                 </div>
               </div>
               <button class="claude-fab" data-ask="1" aria-label="Mit Claude besprechen" title="Mit Claude besprechen">
-                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2 L14.2 9.8 L22 12 L14.2 14.2 L12 22 L9.8 14.2 L2 12 L9.8 9.8 Z" fill="currentColor"/>
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2 L14.2 9.8 L22 12 L14.2 14.2 L12 22 L9.8 14.2 L2 12 L9.8 9.8 Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
                 </svg>
               </button>
             </div>
           `;
           
           document.querySelector('.detail-back').addEventListener('click', () => this.closeDetail());
+          this.attachSwipeBack(document.querySelector('.detail-view'));
           const askBtn = document.querySelector('[data-ask]');
           if (askBtn) askBtn.addEventListener('click', () => this.askClaude(this.selectedArticle));
           const saveDetailBtn = document.querySelector('[data-save-detail]');
