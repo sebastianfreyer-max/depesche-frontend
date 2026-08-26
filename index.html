@@ -694,7 +694,10 @@
             const dotSize = Math.round(letterRect.height * 0.15);
             dotEl.style.width = dotSize + 'px';
             dotEl.style.height = dotSize + 'px';
-            const top = letterRect.bottom - wrapRect.top - dotSize;
+            // Schriftarten reservieren oft unsichtbaren Platz unter dem Buchstaben (für Unterlängen wie g/y),
+            // den ein "D" nicht braucht — daher die gemessene Box etwas nach oben korrigieren
+            const visualBottom = letterRect.top + letterRect.height * 0.82;
+            const top = visualBottom - wrapRect.top - dotSize;
             dotEl.style.top = top + 'px';
 
             // Würfel-Überschlag: pro Viertelumdrehung genau eine Kantenlänge weiter, quer über den ganzen Screen
