@@ -141,6 +141,25 @@
 
     .article-item:active { background: var(--surface); }
 
+    .article-item.is-top {
+      border-left: 3px solid var(--accent);
+      padding-left: 20px;
+      background: var(--accent-wash);
+    }
+
+    .top-badge {
+      display: inline-block;
+      font-family: 'Fundamental Brigade', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 20px;
+      padding: 2px 8px;
+      margin-bottom: 8px;
+    }
+
     .bookmark-btn {
       position: absolute;
       top: 14px;
@@ -554,6 +573,8 @@
         const listEl = document.getElementById('list-view');
         if (!listEl) return;
 
+        const topIds = new Set(this.articles.slice(0, 5).map((a) => this.articleId(a)));
+
         const visibleArticles = this.showSavedOnly
           ? this.articles.map((a, i) => ({ a, i })).filter(({ a }) => this.savedIds.has(this.articleId(a)))
           : this.articles.map((a, i) => ({ a, i }));
@@ -561,9 +582,11 @@
         const articlesHtml = visibleArticles.length > 0
           ? visibleArticles.map(({ a: article, i }) => {
               const saved = this.savedIds.has(this.articleId(article));
+              const isTop = topIds.has(this.articleId(article));
               return `
-            <div class="article-item" data-index="${i}">
+            <div class="article-item${isTop ? ' is-top' : ''}" data-index="${i}">
               <button class="bookmark-btn${saved ? ' is-saved' : ''}" data-save="${i}" aria-label="Merken">${saved ? '★' : '☆'}</button>
+              ${isTop ? '<span class="top-badge">Top</span>' : ''}
               <div class="article-headline">${article.headline}</div>
               <div class="article-summary">${article.summary}</div>
               <div class="article-meta"><span class="article-source">${article.source || 'Quelle'}</span> · ${article.date || 'Datum'}</div>
