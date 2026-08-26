@@ -372,21 +372,30 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 70px 20px 50px;
+      padding: 70px 0 50px;
       text-align: center;
     }
 
-    .loading-mark {
+    .loading-mark-wrap {
       position: relative;
-      width: 220px;
+      width: 100%;
       height: 120px;
-      margin-bottom: 20px;
       overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .loading-mark {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      transform: translateX(-50%);
+      width: 140px;
+      height: 120px;
     }
 
     .loading-D-bar {
       position: absolute;
-      left: 78px;
+      left: 46px;
       top: 4px;
       width: 18px;
       height: 112px;
@@ -395,7 +404,7 @@
 
     .loading-D-bowl {
       position: absolute;
-      left: 96px;
+      left: 64px;
       top: 4px;
       width: 50px;
       height: 112px;
@@ -407,8 +416,8 @@
 
     .loading-dot {
       position: absolute;
-      top: 51px;
-      left: -26px;
+      top: 98px;
+      left: -24px;
       width: 18px;
       height: 18px;
       background: var(--accent);
@@ -416,8 +425,8 @@
     }
 
     @keyframes rollAcross {
-      from { left: -26px; }
-      to { left: 246px; }
+      from { left: -24px; }
+      to { left: calc(100% + 24px); }
     }
 
     .loading-text {
@@ -426,10 +435,11 @@
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--ink-soft);
+      padding: 0 20px;
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .loading-dot { animation: none; left: 110px; }
+      .loading-dot { animation: none; left: 50%; }
     }
   </style>
 </head>
@@ -655,9 +665,11 @@
         const feedHtml = this.isLoading
           ? `
             <div class="loading-state">
-              <div class="loading-mark">
-                <div class="loading-D-bar"></div>
-                <div class="loading-D-bowl"></div>
+              <div class="loading-mark-wrap">
+                <div class="loading-mark">
+                  <div class="loading-D-bar"></div>
+                  <div class="loading-D-bowl"></div>
+                </div>
                 <div class="loading-dot"></div>
               </div>
               <p class="loading-text">Aktuelle Meldungen werden kuratiert…</p>
