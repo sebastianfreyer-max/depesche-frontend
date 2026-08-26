@@ -372,16 +372,17 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 70px 0 50px;
+      min-height: 65vh;
+      padding: 0;
       text-align: center;
     }
 
     .loading-mark-wrap {
       position: relative;
       width: 100%;
-      height: 120px;
+      height: 80px;
       overflow: hidden;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     .loading-mark {
@@ -389,49 +390,49 @@
       left: 50%;
       top: 0;
       transform: translateX(-50%);
-      width: 140px;
-      height: 120px;
+      width: 90px;
+      height: 80px;
     }
 
     .loading-D-bar {
       position: absolute;
-      left: 46px;
-      top: 4px;
-      width: 18px;
-      height: 112px;
+      left: 30px;
+      top: 3px;
+      width: 12px;
+      height: 73px;
       background: var(--ink);
     }
 
     .loading-D-bowl {
       position: absolute;
-      left: 64px;
-      top: 4px;
-      width: 50px;
-      height: 112px;
-      border: 18px solid var(--ink);
+      left: 42px;
+      top: 3px;
+      width: 33px;
+      height: 73px;
+      border: 12px solid var(--ink);
       border-left: none;
-      border-radius: 0 56px 56px 0;
+      border-radius: 0 36px 36px 0;
       box-sizing: border-box;
     }
 
     .loading-dot {
       position: absolute;
-      top: 98px;
-      left: -24px;
-      width: 18px;
-      height: 18px;
+      top: 64px;
+      left: -16px;
+      width: 12px;
+      height: 12px;
       background: var(--accent);
       animation: rollAcross 2.6s linear infinite;
     }
 
     @keyframes rollAcross {
-      from { left: -24px; }
-      to { left: calc(100% + 24px); }
+      from { left: -16px; }
+      to { left: calc(100% + 16px); }
     }
 
     .loading-text {
       font-family: 'Fundamental Brigade', monospace;
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--ink-soft);
