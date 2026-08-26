@@ -496,6 +496,81 @@
         this.renderDetail();
       }
 
+      // Misst den Buchstaben pixelgenau über Canvas (wie beim App-Icon-Build) statt über
+      // die DOM-Layoutbox, die durch Schriftart-Metadaten (Zeilenhöhe, Unterlängen-Reserve) verfälscht ist
+      async positionLoadingAnimation(listEl) {
+        const letterEl = listEl.querySelector('.loading-D-letter');
+        const dotEl = listEl.querySelector('.loading-dot');
+        const wrapEl = listEl.querySelector('.loading-mark-wrap');
+        const markEl = listEl.querySelector('.loading-mark');
+        const notchEl = listEl.querySelector('.loading-D-notch');
+        if (!letterEl || !dotEl || !wrapEl || !markEl) return;
+
+        try {
+          if (document.fonts && document.fonts.ready) await document.fonts.ready;
+        } catch (e) {}
+
+        const fontSizePx = parseFloat(getComputedStyle(letterEl).fontSize) || 40;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.font = `700 ${fontSizePx}px "Fundamental Brigade"`;
+        const m = ctx.measureText('D');
+
+        // Echte Tinten-Maße des Buchstabens (kein Zeilenhöhen-Leerraum, keine Unterlängen-Reserve)
+        const capHeight = m.actualBoundingBoxAscent;
+        const fontAscent = m.fontBoundingBoxAscent != null ? m.fontBoundingBoxAscent : capHeight;
+        const inkLeft = m.actualBoundingBoxLeft || 0;
+
+        // Gleiches Verhältnis wie beim App-Icon (Strichstärke ≈ 18% der Buchstaben-Höhe)
+        const dotSize = Math.max(4, Math.round(capHeight * 0.18));
+        dotEl.style.width = dotSize + 'px';
+        dotEl.style.height = dotSize + 'px';
+
+        const letterRect = letterEl.getBoundingClientRect();
+        const wrapRect = wrapEl.getBoundingClientRect();
+        const markRect = markEl.getBoundingClientRect();
+
+        // Grundlinie = Oberkante der Textbox + Font-Ascent (die tatsächliche Position, an der das "D" aufsitzt)
+        const baselineY = letterRect.top + fontAscent;
+        const topInWrap = baselineY - wrapRect.top - dotSize;
+        dotEl.style.top = topInWrap + 'px';
+
+        if (notchEl) {
+          notchEl.style.width = dotSize + 'px';
+          notchEl.style.height = dotSize + 'px';
+          notchEl.style.top = (baselineY - markRect.top - dotSize) + 'px';
+          notchEl.style.left = (letterRect.left + inkLeft - markRect.left) + 'px';
+        }
+
+        // Würfel-Überschlag: pro Viertelumdrehung genau eine Kantenlänge weiter, quer über den ganzen Screen
+        const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced) {
+          dotEl.style.left = '50%';
+        } else {
+          const travel = wrapRect.width + dotSize * 2;
+          const steps = Math.max(4, Math.round(travel / dotSize));
+          const duration = (steps * 0.22).toFixed(2);
+          let kf = '@keyframes rollTumble {';
+          for (let i = 0; i <= steps; i++) {
+            const pct = (i / steps * 100).toFixed(3);
+            const xPos = (i * dotSize - dotSize).toFixed(1);
+            const rot = i * 90;
+            kf += `${pct}%{transform:translateX(${xPos}px) rotate(${rot}deg);}`;
+          }
+          kf += '}';
+
+          let styleEl = document.getElementById('roll-kf-style');
+          if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = 'roll-kf-style';
+            document.head.appendChild(styleEl);
+          }
+          styleEl.textContent = kf;
+          dotEl.style.left = '0px';
+          dotEl.style.animation = `rollTumble ${duration}s linear infinite`;
+        }
+      }
+
       closeDetail() {
         this.selectedArticle = null;
         const el = document.getElementById('detail-view');
@@ -690,61 +765,7 @@
         `;
 
         if (this.isLoading) {
-          const letterEl = listEl.querySelector('.loading-D-letter');
-          const dotEl = listEl.querySelector('.loading-dot');
-          const wrapEl = listEl.querySelector('.loading-mark-wrap');
-          if (letterEl && dotEl && wrapEl) {
-            const letterRect = letterEl.getBoundingClientRect();
-            const wrapRect = wrapEl.getBoundingClientRect();
-            // Strichstärke proportional zur Buchstabenhöhe (gleiches Verhältnis wie im App-Icon: ~15%)
-            const dotSize = Math.round(letterRect.height * 0.15);
-            dotEl.style.width = dotSize + 'px';
-            dotEl.style.height = dotSize + 'px';
-            // Schriftarten reservieren oft unsichtbaren Platz unter dem Buchstaben (für Unterlängen wie g/y),
-            // den ein "D" nicht braucht — daher die gemessene Box etwas nach oben korrigieren
-            const visualBottom = letterRect.top + letterRect.height * 0.82;
-            const top = visualBottom - wrapRect.top - dotSize;
-            dotEl.style.top = top + 'px';
-
-            // Ecke unten links im "D" ausschneiden (wie beim App-Icon)
-            const markEl = listEl.querySelector('.loading-mark');
-            const notchEl = listEl.querySelector('.loading-D-notch');
-            if (notchEl && markEl) {
-              const markRect = markEl.getBoundingClientRect();
-              notchEl.style.width = dotSize + 'px';
-              notchEl.style.height = dotSize + 'px';
-              notchEl.style.top = (visualBottom - markRect.top - dotSize) + 'px';
-              notchEl.style.left = (letterRect.left - markRect.left) + 'px';
-            }
-
-            // Würfel-Überschlag: pro Viertelumdrehung genau eine Kantenlänge weiter, quer über den ganzen Screen
-            const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            if (prefersReduced) {
-              dotEl.style.left = '50%';
-            } else {
-              const travel = wrapRect.width + dotSize * 2;
-              const steps = Math.max(4, Math.round(travel / dotSize));
-              const duration = (steps * 0.22).toFixed(2);
-              let kf = '@keyframes rollTumble {';
-              for (let i = 0; i <= steps; i++) {
-                const pct = (i / steps * 100).toFixed(3);
-                const xPos = (i * dotSize - dotSize).toFixed(1);
-                const rot = i * 90;
-                kf += `${pct}%{transform:translateX(${xPos}px) rotate(${rot}deg);}`;
-              }
-              kf += '}';
-
-              let styleEl = document.getElementById('roll-kf-style');
-              if (!styleEl) {
-                styleEl = document.createElement('style');
-                styleEl.id = 'roll-kf-style';
-                document.head.appendChild(styleEl);
-              }
-              styleEl.textContent = kf;
-              dotEl.style.left = '0px';
-              dotEl.style.animation = `rollTumble ${duration}s linear infinite`;
-            }
-          }
+          this.positionLoadingAnimation(listEl);
         }
 
         // Attach listeners
