@@ -409,12 +409,6 @@
       width: 12px;
       height: 12px;
       background: var(--accent);
-      animation: rollAcross 2.6s linear infinite;
-    }
-
-    @keyframes rollAcross {
-      from { left: -18px; }
-      to { left: calc(100% + 18px); }
     }
 
     .loading-text {
@@ -695,9 +689,40 @@
           if (letterEl && dotEl && wrapEl) {
             const letterRect = letterEl.getBoundingClientRect();
             const wrapRect = wrapEl.getBoundingClientRect();
-            const dotSize = 12;
+            // Strichstärke proportional zur Buchstabenhöhe (gleiches Verhältnis wie im App-Icon: ~15%)
+            const dotSize = Math.round(letterRect.height * 0.15);
+            dotEl.style.width = dotSize + 'px';
+            dotEl.style.height = dotSize + 'px';
             const top = letterRect.bottom - wrapRect.top - dotSize;
             dotEl.style.top = top + 'px';
+
+            // Würfel-Überschlag: pro Viertelumdrehung genau eine Kantenlänge weiter, quer über den ganzen Screen
+            const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (prefersReduced) {
+              dotEl.style.left = '50%';
+            } else {
+              const travel = wrapRect.width + dotSize * 2;
+              const steps = Math.max(4, Math.round(travel / dotSize));
+              const duration = (steps * 0.22).toFixed(2);
+              let kf = '@keyframes rollTumble {';
+              for (let i = 0; i <= steps; i++) {
+                const pct = (i / steps * 100).toFixed(3);
+                const xPos = (i * dotSize - dotSize).toFixed(1);
+                const rot = i * 90;
+                kf += `${pct}%{transform:translateX(${xPos}px) rotate(${rot}deg);}`;
+              }
+              kf += '}';
+
+              let styleEl = document.getElementById('roll-kf-style');
+              if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'roll-kf-style';
+                document.head.appendChild(styleEl);
+              }
+              styleEl.textContent = kf;
+              dotEl.style.left = '0px';
+              dotEl.style.animation = `rollTumble ${duration}s linear infinite`;
+            }
           }
         }
 
