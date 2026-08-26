@@ -366,6 +366,71 @@
       text-align: center;
       color: var(--ink-soft);
     }
+
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 70px 20px 50px;
+      text-align: center;
+    }
+
+    .loading-mark {
+      position: relative;
+      width: 220px;
+      height: 120px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .loading-D-bar {
+      position: absolute;
+      left: 78px;
+      top: 4px;
+      width: 18px;
+      height: 112px;
+      background: var(--ink);
+    }
+
+    .loading-D-bowl {
+      position: absolute;
+      left: 96px;
+      top: 4px;
+      width: 50px;
+      height: 112px;
+      border: 18px solid var(--ink);
+      border-left: none;
+      border-radius: 0 56px 56px 0;
+      box-sizing: border-box;
+    }
+
+    .loading-dot {
+      position: absolute;
+      top: 51px;
+      left: -26px;
+      width: 18px;
+      height: 18px;
+      background: var(--accent);
+      animation: rollAcross 2.6s linear infinite;
+    }
+
+    @keyframes rollAcross {
+      from { left: -26px; }
+      to { left: 246px; }
+    }
+
+    .loading-text {
+      font-family: 'Fundamental Brigade', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .loading-dot { animation: none; left: 110px; }
+    }
   </style>
 </head>
 <body>
@@ -377,6 +442,7 @@
         this.articles = [];
         this.selectedArticle = null;
         this.showSavedOnly = false;
+        this.isLoading = true;
         this.savedIds = new Set(JSON.parse(localStorage.getItem('depesche_saved') || '[]'));
         this.mountSkeleton();
         this.init();
@@ -417,10 +483,12 @@
           if (!res.ok) throw new Error('Backend nicht erreichbar: ' + res.status);
           const data = await res.json();
           this.articles = data.articles || [];
+          this.isLoading = false;
           this.renderList();
         } catch (e) {
           console.error('Fehler beim Laden:', e.message);
           this.articles = [];
+          this.isLoading = false;
           this.renderList();
         }
       }
@@ -584,7 +652,18 @@
           ? this.articles.map((a, i) => ({ a, i })).filter(({ a }) => this.savedIds.has(this.articleId(a)))
           : this.articles.map((a, i) => ({ a, i }));
 
-        const articlesHtml = visibleArticles.length > 0
+        const feedHtml = this.isLoading
+          ? `
+            <div class="loading-state">
+              <div class="loading-mark">
+                <div class="loading-D-bar"></div>
+                <div class="loading-D-bowl"></div>
+                <div class="loading-dot"></div>
+              </div>
+              <p class="loading-text">Aktuelle Meldungen werden kuratiert…</p>
+            </div>
+          `
+          : visibleArticles.length > 0
           ? visibleArticles.map(({ a: article, i }) => {
               const saved = this.savedIds.has(this.articleId(article));
               const isTop = topIds.has(this.articleId(article));
@@ -607,7 +686,7 @@
               <button class="filter-toggle${this.showSavedOnly ? ' active' : ''}" data-toggle-saved="1">${this.showSavedOnly ? '★ Gemerkt' : '☆ Gemerkt'}</button>
             </div>
           </div>
-          <div class="feed">${articlesHtml}</div>
+          <div class="feed">${feedHtml}</div>
         `;
 
         // Attach listeners
