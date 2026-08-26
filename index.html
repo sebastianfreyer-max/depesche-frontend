@@ -8,11 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="DEPESCHE">
   <meta name="theme-color" content="#1B1A17">
-  <link rel="apple-touch-icon" href="icon-180-v2.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="icon-152-v2.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="icon-167-v2.png">
-  <link rel="apple-touch-icon" sizes="120x120" href="icon-120-v2.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="icon-32-v2.png">
+  <link rel="apple-touch-icon" href="icon-180-v3.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icon-152-v3.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="icon-167-v3.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="icon-120-v3.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icon-32-v3.png">
   <title>DEPESCHE – KI-Briefing</title>
   <style>
     @font-face {
@@ -402,6 +402,11 @@
       color: var(--ink);
     }
 
+    .loading-D-notch {
+      position: absolute;
+      background: var(--paper);
+    }
+
     .loading-dot {
       position: absolute;
       top: 34px;
@@ -651,6 +656,7 @@
               <div class="loading-mark-wrap">
                 <div class="loading-mark">
                   <span class="loading-D-letter">D</span>
+                  <div class="loading-D-notch"></div>
                 </div>
                 <div class="loading-dot"></div>
               </div>
@@ -699,6 +705,17 @@
             const visualBottom = letterRect.top + letterRect.height * 0.82;
             const top = visualBottom - wrapRect.top - dotSize;
             dotEl.style.top = top + 'px';
+
+            // Ecke unten links im "D" ausschneiden (wie beim App-Icon)
+            const markEl = listEl.querySelector('.loading-mark');
+            const notchEl = listEl.querySelector('.loading-D-notch');
+            if (notchEl && markEl) {
+              const markRect = markEl.getBoundingClientRect();
+              notchEl.style.width = dotSize + 'px';
+              notchEl.style.height = dotSize + 'px';
+              notchEl.style.top = (visualBottom - markRect.top - dotSize) + 'px';
+              notchEl.style.left = (letterRect.left - markRect.left) + 'px';
+            }
 
             // Würfel-Überschlag: pro Viertelumdrehung genau eine Kantenlänge weiter, quer über den ganzen Screen
             const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
