@@ -542,6 +542,54 @@
         }
       }
 
+      // Passt die Schriftgröße von "DATENRADAR" so an, dass ihr rechter Rand exakt
+      // mit dem rechten Rand von "TÄGLICH" in der Unterzeile abschließt — live gemessen,
+      // da der Zeilenumbruch der Unterzeile je nach Bildschirmbreite variiert.
+      async alignTitleToSubtitle(listEl) {
+        const titleEl = listEl.querySelector('#title-text');
+        const targetEl = listEl.querySelector('#subtitle-daily');
+        if (!titleEl || !targetEl) return;
+        const titleH1 = titleEl.parentElement;
+
+        // Warten, bis die eigentliche Schriftart wirklich geladen ist — sonst misst der
+        // Browser kurzzeitig an einer schmaleren Ersatzschrift und die Rechnung stimmt nicht
+        try {
+          if (document.fonts && document.fonts.ready) {
+            await document.fonts.ready;
+            if (document.fonts.load) {
+              await Promise.all([
+                document.fonts.load('700 100px "Fundamental Brigade"'),
+                document.fonts.load('400 100px "Fundamental Brigade Condensed"'),
+              ]);
+            }
+          }
+        } catch (e) {}
+        await new Promise((r) => requestAnimationFrame(r));
+
+        // Basisgröße einmalig festhalten (aus der echten CSS-Regel, nicht aus einer
+        // eventuell bereits von einem früheren Durchlauf veränderten Inline-Größe),
+        // damit sich Anpassungen nicht über mehrere Render-Durchläufe aufsummieren
+        if (!this._baseTitleFontSize) {
+          titleH1.style.fontSize = '';
+          this._baseTitleFontSize = parseFloat(getComputedStyle(titleH1).fontSize);
+        }
+
+        // Immer von der Basisgröße aus neu messen, nie von einer vorherigen Anpassung aus
+        titleH1.style.fontSize = this._baseTitleFontSize + 'px';
+
+        const titleRect = titleEl.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        if (titleRect.width === 0 || targetRect.width === 0) return;
+
+        const desiredWidth = targetRect.right - titleRect.left;
+        const currentWidth = titleRect.right - titleRect.left;
+        if (currentWidth <= 0) return;
+
+        let newSize = this._baseTitleFontSize * (desiredWidth / currentWidth);
+        newSize = Math.max(18, Math.min(newSize, this._baseTitleFontSize)); // nie größer als Basisgröße, mit Untergrenze
+        titleH1.style.fontSize = newSize + 'px';
+      }
+
       closeDetail() {
         this.selectedArticle = null;
         const el = document.getElementById('detail-view');
@@ -725,9 +773,9 @@
 
         listEl.innerHTML = `
           <div class="header">
-            <h1 class="title">DATENRADAR</h1>
+            <h1 class="title"><span id="title-text">DATENRADAR</span></h1>
             <div class="header-row">
-              <div class="subtitle">Internationale KI-News, täglich kuriert</div>
+              <div class="subtitle">Internationale KI-News, <span id="subtitle-daily">täglich</span> kuriert</div>
               <button class="filter-toggle${this.showSavedOnly ? ' active' : ''}" data-toggle-saved="1">${this.showSavedOnly ? '★ Gemerkt' : '☆ Gemerkt'}</button>
             </div>
           </div>
@@ -737,6 +785,8 @@
         if (this.isLoading) {
           this.positionLoadingAnimation(listEl);
         }
+
+        this.alignTitleToSubtitle(listEl);
 
         // Attach listeners
         listEl.querySelectorAll('.article-item').forEach((item) => {
