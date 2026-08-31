@@ -586,7 +586,11 @@
         if (currentWidth <= 0) return;
 
         let newSize = this._baseTitleFontSize * (desiredWidth / currentWidth);
-        newSize = Math.max(18, Math.min(newSize, this._baseTitleFontSize)); // nie größer als Basisgröße, mit Untergrenze
+        // Bündig in BEIDE Richtungen: vergrößern UND verkleinern erlaubt,
+        // nur mit sinnvollen Sicherheitsgrenzen (nicht winzig, nicht überbordend)
+        const minSize = 18;
+        const maxSize = this._baseTitleFontSize * 1.8;
+        newSize = Math.max(minSize, Math.min(newSize, maxSize));
         titleH1.style.fontSize = newSize + 'px';
       }
 
