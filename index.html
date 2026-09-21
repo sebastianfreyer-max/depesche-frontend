@@ -526,7 +526,15 @@
           }
 
           const DEG = Math.PI / 180;
-          const kStart = -4, kEnd = 4, kDock = 0;
+
+          // Rollbahn über die volle Breite: Start knapp links außerhalb → quer über den
+          // ganzen Screen → knapp rechts außerhalb. Die Loop-Naht (rechts→links) ist durch
+          // overflow:hidden verdeckt, kein Ein-/Ausblenden nötig. Flach-Rasten liegen bei
+          // notchLeft + k*s, daher trifft k=0 exakt die Aussparung des „D" — der Würfel
+          // dockt beim Vorbeirollen genau dort an.
+          const kStart = Math.floor(-notchLeft / s) - 1;
+          const kEnd = Math.ceil((wrapRect.width - notchLeft) / s) + 1;
+          const kDock = 0;
 
           // Mittelpunkt eines um seine vordere Unterkante kippenden Quadrats – als Versatz
           // (dx,dy) und Drehung (deg) gegenüber der Ruhelage bei k=0 (Aussparung im D).
@@ -544,7 +552,7 @@
           // φ-Stützstellen des Kippens mit physikalischer Zeitverteilung:
           // Winkelgeschwindigkeit ∝ √(1 − sin(45°+φ) + ε) → am Balancepunkt (45°) minimal
           // (der Würfel „kämpft" kurz über die Ecke), an den Enden schnell.
-          const N = 9, eps = 0.16;
+          const N = 5, eps = 0.16;
           const tipPts = [], tipW = [];
           for (let i = 0; i <= N; i++) tipPts.push(i / N * 90);
           for (let i = 0; i < N; i++) {
@@ -553,48 +561,40 @@
           }
           const tipWSum = tipW.reduce((a, b) => a + b, 0);
 
-          // Kurzes, gedämpftes Nachwippen beim Aufsetzen (Impuls trägt minimal über die Fläche)
-          const settle = [{ phi: 96, f: 0.34 }, { phi: 90, f: 0.6 }, { phi: 92, f: 0.82 }, { phi: 90, f: 1 }];
+          // Kurzes, gedämpftes Nachwippen beim Aufsetzen
+          const settle = [{ phi: 94, f: 0.45 }, { phi: 90, f: 1 }];
 
-          // Zeit-Gewichte (Einheiten): Kippen / Rast / Andock-Pause / Start-Halten / Nachwipp-Anteil
-          const TIP = 1, DWELL = 0.30, DOCK = 1.7, HOLD = 0.12, SETTLE = 0.16;
+          // Zeit-Gewichte: Kippen / kurze Rast auf der Fläche / längere Andock-Pause am „D" / Nachwipp-Anteil
+          const TIP = 1, DWELL = 0.16, DOCK = 1.4, SETTLE = 0.14;
           const kf = [];
           let T = 0;
-          const push = (t, g, op) => kf.push({ t, dx: g.dx, dy: g.dy, rot: g.rot, op });
+          const push = (t, g) => kf.push({ t, dx: g.dx, dy: g.dy, rot: g.rot });
 
-          // Start: flach bei kStart, unsichtbar (Loop-Naht + Einblenden)
-          push(0, geom(kStart, 0), 0);
-          T += HOLD;
-          push(T, geom(kStart, 0), 0);
+          push(0, geom(kStart, 0)); // Start flach, knapp links außerhalb
 
           for (let k = kStart; k < kEnd; k++) {
-            const opFrom = (k === kStart) ? 0 : 1;   // erste Kippung: einblenden
-            const opTo = (k === kEnd - 1) ? 0 : 1;    // letzte Kippung: ausblenden
             const tStart = T;
             const mainW = TIP * (1 - SETTLE);
-
-            push(tStart, geom(k, 0), opFrom);
             let acc = 0;
             for (let i = 0; i < N; i++) {
               acc += tipW[i];
-              const frac = acc / tipWSum;
-              push(tStart + mainW * frac, geom(k, tipPts[i + 1]), opFrom + (opTo - opFrom) * frac);
+              push(tStart + mainW * (acc / tipWSum), geom(k, tipPts[i + 1]));
             }
-            for (const b of settle) push(tStart + mainW + TIP * SETTLE * b.f, geom(k, b.phi), opTo);
+            for (const b of settle) push(tStart + mainW + TIP * SETTLE * b.f, geom(k, b.phi));
             T = tStart + TIP;
 
             const landed = k + 1;
             const dwellW = (landed === kDock) ? DOCK : DWELL; // am „D" länger andocken
-            push(T, geom(landed, 0), opTo);
+            push(T, geom(landed, 0));
             T += dwellW;
-            push(T, geom(landed, 0), opTo);
+            push(T, geom(landed, 0));
           }
 
           const p = (v) => v.toFixed(2);
           let css = '@keyframes rollTumble {';
           kf.forEach((f) => {
             const pct = (f.t / T * 100).toFixed(3);
-            css += `${pct}%{transform:translate(${p(f.dx)}px,${p(f.dy)}px) rotate(${p(f.rot)}deg);opacity:${f.op.toFixed(3)};}`;
+            css += `${pct}%{transform:translate(${p(f.dx)}px,${p(f.dy)}px) rotate(${p(f.rot)}deg);}`;
           });
           css += '}';
 
@@ -606,8 +606,9 @@
           }
           styleEl.textContent = css;
 
-          const duration = (T * 0.44).toFixed(2);
-          dotEl.style.opacity = '0';
+          // Tempo an die Breite koppeln, aber begrenzen (nicht zu langsam / zu schnell)
+          const duration = Math.min(18, Math.max(8, T * 0.23)).toFixed(2);
+          dotEl.style.opacity = '1';
           dotEl.style.animation = `rollTumble ${duration}s linear infinite`;
           return true;
         };
