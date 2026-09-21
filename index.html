@@ -500,35 +500,103 @@
         const markEl = listEl.querySelector('.loading-mark');
         if (!letterEl || !dotEl || !wrapEl || !markEl) return;
 
-        // Das Bild enthält den Eck-Ausschnitt bereits exakt wie im App-Icon (18% der Höhe = Aussparung).
-        // Der animierte Punkt muss nur noch exakt an dieser Stelle andocken.
-        const letterRect = letterEl.getBoundingClientRect();
-        const wrapRect = wrapEl.getBoundingClientRect();
-        const markRect = markEl.getBoundingClientRect();
+        const build = () => {
+          const letterRect = letterEl.getBoundingClientRect();
+          const wrapRect = wrapEl.getBoundingClientRect();
+          if (!letterRect.height || !letterRect.width || !wrapRect.width) return false;
 
-        const dotSize = Math.max(4, Math.round(letterRect.height * 0.1774));
-        dotEl.style.width = dotSize + 'px';
-        dotEl.style.height = dotSize + 'px';
+          // Kantenlänge des Würfels = quadratische Aussparung im „D" (18 % der Höhe)
+          const s = Math.max(4, Math.round(letterRect.height * 0.1774));
+          dotEl.style.width = s + 'px';
+          dotEl.style.height = s + 'px';
+          dotEl.style.transformOrigin = '50% 50%'; // Mittelpunkt-Origin für die Roll-Geometrie
 
-        const topInWrap = letterRect.bottom - wrapRect.top - dotSize;
-        dotEl.style.top = topInWrap + 'px';
+          // Bezugsebene = Unterkante des „D"; Ruhe-/Andockposition = Aussparung unten links
+          const baselineTop = letterRect.bottom - wrapRect.top;
+          const notchLeft = letterRect.left - wrapRect.left;
+          dotEl.style.top = (baselineTop - s) + 'px';
+          dotEl.style.left = notchLeft + 'px';
 
-        // Würfel-Überschlag: pro Viertelumdrehung genau eine Kantenlänge weiter, quer über den ganzen Screen
-        const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (prefersReduced) {
-          dotEl.style.left = '50%';
-        } else {
-          const travel = wrapRect.width + dotSize * 2;
-          const steps = Math.max(4, Math.round(travel / dotSize));
-          const duration = (steps * 0.22).toFixed(2);
-          let kf = '@keyframes rollTumble {';
-          for (let i = 0; i <= steps; i++) {
-            const pct = (i / steps * 100).toFixed(3);
-            const xPos = (i * dotSize - dotSize).toFixed(1);
-            const rot = i * 90;
-            kf += `${pct}%{transform:translateX(${xPos}px) rotate(${rot}deg);}`;
+          const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          if (prefersReduced) {
+            dotEl.style.animation = 'none';
+            dotEl.style.transform = 'none';
+            dotEl.style.opacity = '1';
+            return true; // sitzt statisch in der Aussparung des „D"
           }
-          kf += '}';
+
+          const DEG = Math.PI / 180;
+          const kStart = -4, kEnd = 4, kDock = 0;
+
+          // Mittelpunkt eines um seine vordere Unterkante kippenden Quadrats – als Versatz
+          // (dx,dy) und Drehung (deg) gegenüber der Ruhelage bei k=0 (Aussparung im D).
+          // Der Schwerpunkt steigt über die Ecke (dy<0) und fällt auf die nächste Fläche.
+          const geom = (k, phiDeg) => {
+            const phi = phiDeg * DEG;
+            const sinp = Math.sin(phi), cosp = Math.cos(phi);
+            const pivotX = (k + 0.5) * s;   // vordere Unterkante relativ zur Ruhe-Mitte
+            const pivotY = s / 2;           // Rollebene liegt s/2 unter der Mitte
+            const dx = pivotX + 0.5 * s * (sinp - cosp);
+            const dy = pivotY - 0.5 * s * (sinp + cosp);
+            return { dx, dy, rot: (k - kStart) * 90 + phiDeg };
+          };
+
+          // φ-Stützstellen des Kippens mit physikalischer Zeitverteilung:
+          // Winkelgeschwindigkeit ∝ √(1 − sin(45°+φ) + ε) → am Balancepunkt (45°) minimal
+          // (der Würfel „kämpft" kurz über die Ecke), an den Enden schnell.
+          const N = 9, eps = 0.16;
+          const tipPts = [], tipW = [];
+          for (let i = 0; i <= N; i++) tipPts.push(i / N * 90);
+          for (let i = 0; i < N; i++) {
+            const mid = (tipPts[i] + tipPts[i + 1]) / 2;
+            tipW.push(1 / Math.sqrt(Math.max(1e-4, 1 - Math.sin((45 + mid) * DEG) + eps)));
+          }
+          const tipWSum = tipW.reduce((a, b) => a + b, 0);
+
+          // Kurzes, gedämpftes Nachwippen beim Aufsetzen (Impuls trägt minimal über die Fläche)
+          const settle = [{ phi: 96, f: 0.34 }, { phi: 90, f: 0.6 }, { phi: 92, f: 0.82 }, { phi: 90, f: 1 }];
+
+          // Zeit-Gewichte (Einheiten): Kippen / Rast / Andock-Pause / Start-Halten / Nachwipp-Anteil
+          const TIP = 1, DWELL = 0.30, DOCK = 1.7, HOLD = 0.12, SETTLE = 0.16;
+          const kf = [];
+          let T = 0;
+          const push = (t, g, op) => kf.push({ t, dx: g.dx, dy: g.dy, rot: g.rot, op });
+
+          // Start: flach bei kStart, unsichtbar (Loop-Naht + Einblenden)
+          push(0, geom(kStart, 0), 0);
+          T += HOLD;
+          push(T, geom(kStart, 0), 0);
+
+          for (let k = kStart; k < kEnd; k++) {
+            const opFrom = (k === kStart) ? 0 : 1;   // erste Kippung: einblenden
+            const opTo = (k === kEnd - 1) ? 0 : 1;    // letzte Kippung: ausblenden
+            const tStart = T;
+            const mainW = TIP * (1 - SETTLE);
+
+            push(tStart, geom(k, 0), opFrom);
+            let acc = 0;
+            for (let i = 0; i < N; i++) {
+              acc += tipW[i];
+              const frac = acc / tipWSum;
+              push(tStart + mainW * frac, geom(k, tipPts[i + 1]), opFrom + (opTo - opFrom) * frac);
+            }
+            for (const b of settle) push(tStart + mainW + TIP * SETTLE * b.f, geom(k, b.phi), opTo);
+            T = tStart + TIP;
+
+            const landed = k + 1;
+            const dwellW = (landed === kDock) ? DOCK : DWELL; // am „D" länger andocken
+            push(T, geom(landed, 0), opTo);
+            T += dwellW;
+            push(T, geom(landed, 0), opTo);
+          }
+
+          const p = (v) => v.toFixed(2);
+          let css = '@keyframes rollTumble {';
+          kf.forEach((f) => {
+            const pct = (f.t / T * 100).toFixed(3);
+            css += `${pct}%{transform:translate(${p(f.dx)}px,${p(f.dy)}px) rotate(${p(f.rot)}deg);opacity:${f.op.toFixed(3)};}`;
+          });
+          css += '}';
 
           let styleEl = document.getElementById('roll-kf-style');
           if (!styleEl) {
@@ -536,9 +604,21 @@
             styleEl.id = 'roll-kf-style';
             document.head.appendChild(styleEl);
           }
-          styleEl.textContent = kf;
-          dotEl.style.left = '0px';
+          styleEl.textContent = css;
+
+          const duration = (T * 0.44).toFixed(2);
+          dotEl.style.opacity = '0';
           dotEl.style.animation = `rollTumble ${duration}s linear infinite`;
+          return true;
+        };
+
+        // Nach dem Layout messen; falls das (Base64-)D-Bild noch nicht dekodiert ist, auf 'load' warten
+        const run = () => { if (!build()) requestAnimationFrame(build); };
+        if (letterEl.complete && letterEl.naturalWidth > 0) {
+          requestAnimationFrame(run);
+        } else {
+          letterEl.addEventListener('load', () => requestAnimationFrame(run), { once: true });
+          requestAnimationFrame(run);
         }
       }
 
