@@ -496,10 +496,12 @@
       constructor() {
         this.API = 'https://depesche-backend-iota.vercel.app/api/articles';
         this.articles = [];
+        this.displayList = [];
         this.selectedArticle = null;
         this.showSavedOnly = false;
         this.isLoading = true;
-        this.savedIds = new Set(JSON.parse(localStorage.getItem('depesche_saved') || '[]'));
+        this.savedArticles = new Map(); // id -> vollständiges Artikel-Objekt (überlebt Feed-Rotation)
+        this.loadSaved();
         this.customFeeds = JSON.parse(localStorage.getItem('depesche_feeds') || '[]');
         this.showSources = false;
         this.sourceBusy = false;
@@ -523,13 +525,55 @@
         return article.link || (article.source + '|' + article.headline);
       }
 
-      toggleSave(id) {
-        if (this.savedIds.has(id)) {
-          this.savedIds.delete(id);
-        } else {
-          this.savedIds.add(id);
+      // Lädt gespeicherte Artikel; wandelt das alte Format (nur IDs, ohne Inhalt) einmalig
+      // in Stubs um, damit zumindest verlinkte Altartikel weiter erreichbar bleiben.
+      loadSaved() {
+        try {
+          const full = JSON.parse(localStorage.getItem('depesche_saved_articles') || '{}');
+          this.savedArticles = new Map(Object.entries(full));
+        } catch (e) {
+          this.savedArticles = new Map();
         }
-        localStorage.setItem('depesche_saved', JSON.stringify([...this.savedIds]));
+        const legacyRaw = localStorage.getItem('depesche_saved');
+        if (legacyRaw) {
+          try {
+            const legacyIds = JSON.parse(legacyRaw);
+            legacyIds.forEach((id) => {
+              if (this.savedArticles.has(id)) return;
+              const isUrl = /^https?:\/\//.test(id);
+              this.savedArticles.set(id, {
+                headline: 'Gespeicherter Artikel (Titel nicht mehr verfügbar)',
+                summary: 'Dieser Artikel wurde vor der Umstellung auf dauerhaftes Merken gespeichert; der Inhalt ließ sich nicht wiederherstellen.',
+                content: '',
+                source: isUrl ? this.hostOf(id) : (id.split('|')[0] || 'Quelle'),
+                date: '',
+                link: isUrl ? id : '',
+                category: '',
+                savedAt: 0,
+              });
+            });
+          } catch (e) { /* nichts zu migrieren */ }
+          localStorage.removeItem('depesche_saved');
+          this.persistSaved();
+        }
+      }
+
+      persistSaved() {
+        localStorage.setItem('depesche_saved_articles', JSON.stringify(Object.fromEntries(this.savedArticles)));
+      }
+
+      toggleSave(article) {
+        const id = this.articleId(article);
+        if (this.savedArticles.has(id)) {
+          this.savedArticles.delete(id);
+        } else {
+          this.savedArticles.set(id, {
+            headline: article.headline, summary: article.summary, content: article.content,
+            source: article.source, date: article.date, link: article.link, category: article.category,
+            savedAt: Date.now(),
+          });
+        }
+        this.persistSaved();
         this.renderList();
         if (this.selectedArticle !== null) this.renderDetail();
       }
@@ -912,7 +956,7 @@
       }
 
       askClaude(articleIndex) {
-        const article = this.articles[articleIndex];
+        const article = this.displayList[articleIndex];
         if (!article) return;
 
         const prompt = `Ich lese gerade folgende KI-Nachricht und würde gerne mehr dazu wissen:\n\n"${article.headline}"\n\n${article.summary}\n\nQuelle: ${article.source}${article.link ? ' (' + article.link + ')' : ''}\n\nKannst du mir den Hintergrund erklären und einschätzen, warum das relevant ist?`;
@@ -939,13 +983,13 @@
           return;
         }
 
-        const article = this.articles[this.selectedArticle];
+        const article = this.displayList[this.selectedArticle];
         if (!article) {
           detailEl.classList.remove('active');
           return;
         }
 
-        const isSaved = this.savedIds.has(this.articleId(article));
+        const isSaved = this.savedArticles.has(this.articleId(article));
 
         detailEl.innerHTML = `
           <div class="detail-header">
@@ -983,7 +1027,7 @@
         const askBtn = detailEl.querySelector('[data-ask]');
         if (askBtn) askBtn.addEventListener('click', () => this.askClaude(this.selectedArticle));
         const saveDetailBtn = detailEl.querySelector('[data-save-detail]');
-        if (saveDetailBtn) saveDetailBtn.addEventListener('click', () => this.toggleSave(this.articleId(article)));
+        if (saveDetailBtn) saveDetailBtn.addEventListener('click', () => this.toggleSave(article));
       }
 
       renderList() {
@@ -992,9 +1036,11 @@
 
         const topIds = new Set(this.articles.slice(0, 5).map((a) => this.articleId(a)));
 
-        const visibleArticles = this.showSavedOnly
-          ? this.articles.map((a, i) => ({ a, i })).filter(({ a }) => this.savedIds.has(this.articleId(a)))
-          : this.articles.map((a, i) => ({ a, i }));
+        // „Gemerkt" zeigt die dauerhaft gespeicherten Artikel selbst — unabhängig davon,
+        // ob sie noch im heutigen Briefing stecken (neueste zuerst).
+        const savedList = [...this.savedArticles.values()].sort((x, y) => (y.savedAt || 0) - (x.savedAt || 0));
+        this.displayList = this.showSavedOnly ? savedList : this.articles;
+        const visibleArticles = this.displayList.map((a, i) => ({ a, i }));
 
         const feedHtml = this.isLoading
           ? `
@@ -1010,7 +1056,7 @@
           `
           : visibleArticles.length > 0
           ? visibleArticles.map(({ a: article, i }) => {
-              const saved = this.savedIds.has(this.articleId(article));
+              const saved = this.savedArticles.has(this.articleId(article));
               const isTop = topIds.has(this.articleId(article));
               return `
             <div class="article-item${isTop ? ' is-top' : ''}" data-index="${i}">
@@ -1057,7 +1103,7 @@
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const idx = parseInt(btn.dataset.save);
-            this.toggleSave(this.articleId(this.articles[idx]));
+            this.toggleSave(this.displayList[idx]);
           });
         });
         const toggleBtn = listEl.querySelector('[data-toggle-saved]');
