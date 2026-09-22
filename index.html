@@ -803,6 +803,29 @@
           this._gapCache[key] = gap;
           return gap;
         };
+        // Wie weit die Tinte eines Zeichens unter die Grundlinie reicht (z. B. beim Komma).
+        const pixelDescent = (font, fs, ch) => {
+          const key = 'desc|' + font + '|' + ch;
+          if (this._gapCache[key] !== undefined) return this._gapCache[key];
+          const k = 8, cv = document.createElement('canvas');
+          cv.width = Math.ceil(fs * 3 * k); cv.height = Math.ceil(fs * 3 * k);
+          const c = cv.getContext('2d');
+          c.scale(k, k); c.font = font; c.textBaseline = 'alphabetic';
+          const baselineY = fs * 1.4;
+          c.fillText(ch, fs * 0.5, baselineY);
+          const d = c.getImageData(0, 0, cv.width, cv.height).data;
+          let maxY = 0;
+          for (let y = cv.height - 1; y >= 0; y--) {
+            let hit = false;
+            for (let x = 0; x < cv.width; x++) {
+              if (d[(y * cv.width + x) * 4 + 3] > 127) { hit = true; break; }
+            }
+            if (hit) { maxY = y; break; }
+          }
+          const descent = Math.max(0, (maxY + 1) / k - baselineY);
+          this._gapCache[key] = descent;
+          return descent;
+        };
         const inkOf = (el, text) => {
           const cs = getComputedStyle(el);
           const fs = parseFloat(cs.fontSize);
@@ -884,6 +907,16 @@
           b.style.paddingTop = '0';
           b.style.paddingBottom = '0';
         });
+
+        // 3) Das Komma in der Unterzeile reicht unter die Grundlinie. Damit seine
+        //    Unterkante — nicht die Grundlinie — den unteren Boxabschluss bildet
+        //    (bündig mit der Unterkante der Buttons), wird die Zeile exakt um die
+        //    Unterlänge des Kommas nach oben verschoben.
+        const subCS = getComputedStyle(subtitleEl);
+        const subFS = parseFloat(subCS.fontSize);
+        const subFont = `${subCS.fontStyle} ${subCS.fontWeight} ${subFS}px ${subCS.fontFamily}`;
+        const commaDescent = pixelDescent(subFont, subFS, ',') + 1; // +1px zusätzlicher optischer Ausgleich
+        subtitleEl.style.transform = commaDescent > 0 ? `translateY(-${commaDescent.toFixed(2)}px)` : '';
       }
 
       closeDetail() {
