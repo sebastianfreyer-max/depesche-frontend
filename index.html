@@ -111,6 +111,7 @@
       color: var(--ink-soft);
       letter-spacing: 0.12em;
       text-transform: uppercase;
+      white-space: nowrap;
     }
 
     .filter-toggle {
@@ -123,12 +124,73 @@
       border-radius: 20px;
       cursor: pointer;
       white-space: nowrap;
+      text-align: center;
     }
 
     .filter-toggle.active {
       border-color: var(--accent);
       color: var(--accent);
     }
+
+    .header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .header-left { min-width: 0; }
+    .header-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: stretch;
+      flex-shrink: 0;
+    }
+
+    .sources-view {
+      position: fixed; inset: 0; z-index: 50;
+      background: var(--paper);
+      transform: translateY(100%);
+      transition: transform .3s cubic-bezier(.4,0,.2,1);
+      display: flex; flex-direction: column;
+    }
+    .sources-view.active { transform: translateY(0); }
+    .sources-header {
+      border-bottom: 2px solid var(--ink);
+      padding: calc(env(safe-area-inset-top) + 20px) 16px 14px;
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .sources-title { font-family: 'Fundamental Brigade', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: -0.02em; }
+    .sources-close { background: none; border: none; color: var(--ink); font-size: 1.3rem; cursor: pointer; line-height: 1; }
+    .sources-scroll { flex: 1; overflow-y: auto; padding: 8px 16px calc(env(safe-area-inset-bottom) + 28px); }
+    .sources-section-label {
+      font-family: 'Fundamental Brigade', monospace; font-size: 0.62rem; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--ink-soft); margin: 20px 0 8px;
+    }
+    .source-default { color: var(--ink-soft); font-size: 0.82rem; line-height: 1.6; }
+    .source-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--rule); }
+    .source-info { flex: 1; min-width: 0; }
+    .source-name { font-family: 'Fundamental Brigade', sans-serif; font-weight: 600; font-size: 0.95rem; }
+    .source-url { font-family: 'Fundamental Brigade', monospace; font-size: 0.66rem; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .source-cat { font-size: 0.68rem; color: var(--accent); margin-top: 1px; }
+    .source-filter { display: flex; align-items: center; gap: 5px; font-size: 0.62rem; color: var(--ink-soft); font-family: 'Fundamental Brigade', monospace; white-space: nowrap; }
+    .source-remove { background: none; border: none; color: var(--ink-soft); font-size: 1rem; cursor: pointer; padding: 2px 4px; }
+    .add-source { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .add-source input[type=text] {
+      font-family: 'Fundamental Brigade', monospace; font-size: 0.82rem;
+      background: var(--surface); border: 1px solid var(--rule); color: var(--ink);
+      padding: 10px; border-radius: 8px; width: 100%;
+    }
+    .add-row { display: flex; gap: 8px; }
+    .add-row input { flex: 1; min-width: 0; }
+    .add-filter { display: flex; align-items: center; gap: 7px; font-size: 0.74rem; color: var(--ink-soft); }
+    .add-btn {
+      font-family: 'Fundamental Brigade', sans-serif; font-size: 0.85rem;
+      background: var(--ink); color: var(--paper); border: none; padding: 11px; border-radius: 8px; cursor: pointer;
+    }
+    .add-btn:disabled { opacity: .5; cursor: default; }
+    .source-error { color: var(--accent); font-size: 0.76rem; }
+    .source-hint { color: var(--ink-soft); font-size: 0.72rem; line-height: 1.5; }
 
     .feed {
       flex: 1;
@@ -432,11 +494,18 @@
   <script>
     class Depesche {
       constructor() {
+        this.API = 'https://depesche-backend-iota.vercel.app/api/articles';
         this.articles = [];
         this.selectedArticle = null;
         this.showSavedOnly = false;
         this.isLoading = true;
         this.savedIds = new Set(JSON.parse(localStorage.getItem('depesche_saved') || '[]'));
+        this.customFeeds = JSON.parse(localStorage.getItem('depesche_feeds') || '[]');
+        this.showSources = false;
+        this.sourceBusy = false;
+        this.sourceError = '';
+        this.feedsChanged = false;
+        this.form = { url: '', name: '', category: '', filter: false };
         this.mountSkeleton();
         this.init();
       }
@@ -445,6 +514,7 @@
         document.getElementById('app').innerHTML = `
           <div id="list-view"></div>
           <div class="detail-view" id="detail-view"></div>
+          <div class="sources-view" id="sources-view"></div>
         `;
         this.attachSwipeBack(document.getElementById('detail-view'));
       }
@@ -471,8 +541,13 @@
 
       async loadArticles() {
         try {
-          // Lade Meldungen vom Backend (kostenlose RSS-Kuration)
-          const res = await fetch('https://depesche-backend-iota.vercel.app/api/articles');
+          // Lade Meldungen vom Backend (kostenlose RSS-Kuration) inkl. eigener Quellen
+          let url = this.API;
+          if (this.customFeeds.length) {
+            const payload = this.customFeeds.map((f) => ({ url: f.url, source: f.source, category: f.category, filter: !!f.filter }));
+            url += '?feeds=' + encodeURIComponent(JSON.stringify(payload));
+          }
+          const res = await fetch(url);
           if (!res.ok) throw new Error('Backend nicht erreichbar: ' + res.status);
           const data = await res.json();
           this.articles = data.articles || [];
@@ -658,21 +733,113 @@
         // Immer von der Basisgröße aus neu messen, nie von einer vorherigen Anpassung aus
         titleH1.style.fontSize = this._baseTitleFontSize + 'px';
 
-        const titleRect = titleEl.getBoundingClientRect();
-        const targetRect = targetEl.getBoundingClientRect();
-        if (titleRect.width === 0 || targetRect.width === 0) return;
+        // --- Unsichtbare Box: alle Kanten an der TINTE messen, nicht an Textboxen ---
+        // Canvas liefert die echten Glyphenkanten (ohne Laufweite/Seitenabstand).
+        const ctx = (this._measureCtx ||= document.createElement('canvas').getContext('2d'));
+        // Rechter Leerraum eines Glyphen per Pixel-Scan (die Bounding-Box-Metriken der
+        // Schriftdatei sind z. B. beim „R" fast 1 px ungenau). Ergebnis wird gecacht.
+        this._gapCache ||= {};
+        const pixelRightGap = (font, fs, ch) => {
+          const key = font + '|' + ch;
+          if (this._gapCache[key] !== undefined) return this._gapCache[key];
+          const k = 8, cv = document.createElement('canvas');
+          cv.width = Math.ceil(fs * 3 * k); cv.height = Math.ceil(fs * 2 * k);
+          const c = cv.getContext('2d');
+          c.scale(k, k); c.font = font; c.textBaseline = 'alphabetic';
+          c.fillText(ch, fs * 0.5, fs * 1.4);
+          const w = c.measureText(ch).width;
+          const d = c.getImageData(0, 0, cv.width, cv.height).data;
+          let r = 0;
+          for (let y = 0; y < cv.height; y++) {
+            for (let x = cv.width - 1; x > r; x--) {
+              if (d[(y * cv.width + x) * 4 + 3] > 127) { r = x; break; }
+            }
+          }
+          const gap = w - ((r + 1) / k - fs * 0.5);
+          this._gapCache[key] = gap;
+          return gap;
+        };
+        const inkOf = (el, text) => {
+          const cs = getComputedStyle(el);
+          const fs = parseFloat(cs.fontSize);
+          const font = `${cs.fontStyle} ${cs.fontWeight} ${fs}px ${cs.fontFamily}`;
+          ctx.font = font;
+          const m = ctx.measureText(text);
+          const ls = parseFloat(cs.letterSpacing) || 0; // Laufweite hängt auch hinter dem letzten Buchstaben
+          const first = ctx.measureText(text.slice(0, 1));
+          return {
+            ascent: m.actualBoundingBoxAscent,
+            rightGap: ls + pixelRightGap(font, fs, text.slice(-1)), // Leerraum rechts neben der Tinte
+            leftGap: first.actualBoundingBoxLeft * -1,
+          };
+        };
+        // Grundlinie eines Elements exakt über ein unsichtbares Hilfselement ermitteln
+        const baselineOf = (el) => {
+          const probe = document.createElement('span');
+          probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline;';
+          el.appendChild(probe);
+          const y = probe.getBoundingClientRect().bottom;
+          probe.remove();
+          return y;
+        };
 
-        const desiredWidth = targetRect.right - titleRect.left;
-        const currentWidth = titleRect.right - titleRect.left;
-        if (currentWidth <= 0) return;
+        const subtitleEl = listEl.querySelector('.subtitle');
+        const subText = subtitleEl.textContent.trim().toUpperCase();
+        const titleText = titleEl.textContent.trim();
 
-        let newSize = this._baseTitleFontSize * (desiredWidth / currentWidth);
-        // Bündig in BEIDE Richtungen: vergrößern UND verkleinern erlaubt,
-        // nur mit sinnvollen Sicherheitsgrenzen (nicht winzig, nicht überbordend)
-        const minSize = 18;
-        const maxSize = this._baseTitleFontSize * 1.8;
-        newSize = Math.max(minSize, Math.min(newSize, maxSize));
-        titleH1.style.fontSize = newSize + 'px';
+        // 1) Blocksatz: rechte Tintenkante „R" = rechte Tintenkante „H"
+        //    (zweimal iterieren, da der Seitenabstand des R mitskaliert)
+        const minSize = 18, maxSize = this._baseTitleFontSize * 1.8;
+        for (let pass = 0; pass < 8; pass++) {
+          const tRect = titleEl.getBoundingClientRect();
+          const sRect = targetEl.getBoundingClientRect();
+          if (!tRect.width || !sRect.width) return;
+          const tInk = inkOf(titleH1, titleText);
+          const sInk = inkOf(subtitleEl, subText);
+          const inkLeft = tRect.left + tInk.leftGap;
+          const inkRightTitle = tRect.right - tInk.rightGap;
+          const inkRightSub = sRect.right - sInk.rightGap;
+          const cur = inkRightTitle - inkLeft;
+          const want = inkRightSub - inkLeft;
+          if (cur <= 0) return;
+          const size = parseFloat(titleH1.style.fontSize) || this._baseTitleFontSize;
+          const next = Math.max(minSize, Math.min(size * (want / cur), maxSize));
+          titleH1.style.fontSize = next + 'px';
+          if (Math.abs(want - cur) < 0.1) break;
+        }
+
+        // Feinjustierung: Browser rasten Schriftgrößen, der Rest (< 1–2 px) wird über
+        // eine minimale Laufweitenänderung auf alle Buchstabenabstände verteilt.
+        titleEl.style.letterSpacing = '';
+        for (let pass = 0; pass < 3; pass++) {
+          const tRect = titleEl.getBoundingClientRect();
+          const sRect = targetEl.getBoundingClientRect();
+          const diff = (sRect.right - inkOf(subtitleEl, subText).rightGap)
+                     - (tRect.right - inkOf(titleEl, titleText).rightGap);
+          if (Math.abs(diff) < 0.05) break;
+          const curLS = parseFloat(getComputedStyle(titleEl).letterSpacing) || 0;
+          titleEl.style.letterSpacing = (curLS + diff / Math.max(1, titleText.length - 1)) + 'px';
+        }
+
+        // 2) Buttons in dieselbe Box: oben = Versalhöhe „DATENRADAR",
+        //    unten = Grundlinie „…TÄGLICH"
+        const actions = listEl.querySelector('.header-actions');
+        const topRow = listEl.querySelector('.header-top');
+        if (!actions || !topRow) return;
+        const capTop = baselineOf(titleEl) - inkOf(titleH1, titleText).ascent;
+        const subBase = baselineOf(subtitleEl);
+        const boxH = subBase - capTop;
+        const rowTop = topRow.getBoundingClientRect().top;
+        const gap = Math.max(4, Math.round(boxH * 0.1));
+        const btnH = Math.max(22, (boxH - gap) / 2);
+        actions.style.marginTop = (capTop - rowTop) + 'px';
+        actions.style.height = boxH + 'px';
+        actions.style.gap = gap + 'px';
+        actions.querySelectorAll('.filter-toggle').forEach((b) => {
+          b.style.height = btnH + 'px';
+          b.style.paddingTop = '0';
+          b.style.paddingBottom = '0';
+        });
       }
 
       closeDetail() {
@@ -858,10 +1025,15 @@
 
         listEl.innerHTML = `
           <div class="header">
-            <h1 class="title"><span id="title-text">DATENRADAR</span></h1>
-            <div class="header-row">
-              <div class="subtitle">Internationale KI-News, <span id="subtitle-daily">täglich</span> kuriert</div>
-              <button class="filter-toggle${this.showSavedOnly ? ' active' : ''}" data-toggle-saved="1">${this.showSavedOnly ? '★ Gemerkt' : '☆ Gemerkt'}</button>
+            <div class="header-top">
+              <div class="header-left">
+                <h1 class="title"><span id="title-text">DATENRADAR</span></h1>
+                <div class="subtitle">Internationale KI-News, <span id="subtitle-daily">täglich</span></div>
+              </div>
+              <div class="header-actions">
+                <button class="filter-toggle" data-open-sources="1">＋ Quellen</button>
+                <button class="filter-toggle${this.showSavedOnly ? ' active' : ''}" data-toggle-saved="1">${this.showSavedOnly ? '★ Gemerkt' : '☆ Gemerkt'}</button>
+              </div>
             </div>
           </div>
           <div class="feed">${feedHtml}</div>
@@ -893,6 +1065,155 @@
           this.showSavedOnly = !this.showSavedOnly;
           this.renderList();
         });
+        const openSrcBtn = listEl.querySelector('[data-open-sources]');
+        if (openSrcBtn) openSrcBtn.addEventListener('click', () => this.openSources());
+      }
+
+      // ---- Eigene Quellen verwalten -------------------------------------------
+      saveFeeds() {
+        localStorage.setItem('depesche_feeds', JSON.stringify(this.customFeeds));
+      }
+
+      hostOf(url) {
+        try { return new URL(url).hostname.replace(/^www\./, ''); } catch (e) { return url; }
+      }
+
+      openSources() {
+        this.showSources = true;
+        this.sourceError = '';
+        this.renderSources();
+      }
+
+      closeSources() {
+        this.captureForm();
+        this.showSources = false;
+        this.renderSources();
+        if (this.feedsChanged) {
+          this.feedsChanged = false;
+          this.isLoading = true;
+          this.renderList();
+          this.loadArticles();
+        }
+      }
+
+      captureForm() {
+        const el = document.getElementById('sources-view');
+        if (!el) return;
+        const u = el.querySelector('#src-url');
+        if (!u) return; // Panel gerade nicht im Add-Zustand gerendert
+        this.form = {
+          url: u.value,
+          name: (el.querySelector('#src-name') || {}).value || '',
+          category: (el.querySelector('#src-cat') || {}).value || '',
+          filter: !!(el.querySelector('#src-filter') || {}).checked,
+        };
+      }
+
+      removeSource(i) {
+        this.captureForm();
+        this.customFeeds.splice(i, 1);
+        this.saveFeeds();
+        this.feedsChanged = true;
+        this.renderSources();
+      }
+
+      toggleSourceFilter(i) {
+        this.captureForm();
+        this.customFeeds[i].filter = !this.customFeeds[i].filter;
+        this.saveFeeds();
+        this.feedsChanged = true;
+        this.renderSources();
+      }
+
+      async submitSource() {
+        this.captureForm();
+        const input = (this.form.url || '').trim();
+        if (!input) { this.sourceError = 'Bitte eine URL eingeben.'; this.renderSources(); return; }
+        this.sourceBusy = true;
+        this.sourceError = '';
+        this.renderSources();
+        try {
+          const res = await fetch(this.API + '?discover=' + encodeURIComponent(input));
+          const data = await res.json();
+          if (!data.ok) {
+            this.sourceError = data.error || 'Kein Feed gefunden.';
+          } else if (this.customFeeds.some((x) => x.url === data.feedUrl)) {
+            this.sourceError = 'Diese Quelle ist bereits vorhanden.';
+          } else {
+            this.customFeeds.push({
+              url: data.feedUrl,
+              source: (this.form.name || '').trim() || data.title || this.hostOf(data.feedUrl),
+              category: (this.form.category || '').trim() || 'Eigene Quelle',
+              filter: !!this.form.filter,
+            });
+            this.saveFeeds();
+            this.feedsChanged = true;
+            this.form = { url: '', name: '', category: '', filter: false };
+            this.sourceError = '';
+          }
+        } catch (e) {
+          this.sourceError = 'Netzwerkfehler: ' + e.message;
+        }
+        this.sourceBusy = false;
+        this.renderSources();
+      }
+
+      renderSources() {
+        const el = document.getElementById('sources-view');
+        if (!el) return;
+        if (!this.showSources) { el.classList.remove('active'); return; }
+
+        const esc = (s) => (s || '').toString()
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const f = this.form || { url: '', name: '', category: '', filter: false };
+
+        const customHtml = this.customFeeds.length
+          ? this.customFeeds.map((s, i) => `
+              <div class="source-row">
+                <div class="source-info">
+                  <div class="source-name">${esc(s.source)}</div>
+                  <div class="source-url">${esc(s.url)}</div>
+                  <div class="source-cat">${esc(s.category)}</div>
+                </div>
+                <label class="source-filter"><input type="checkbox" data-filter-idx="${i}" ${s.filter ? 'checked' : ''}> KI-Filter</label>
+                <button class="source-remove" data-remove-idx="${i}" aria-label="Entfernen">✕</button>
+              </div>`).join('')
+          : '<div class="source-hint">Noch keine eigenen Quellen. Füge unten eine hinzu.</div>';
+
+        el.innerHTML = `
+          <div class="sources-header">
+            <div class="sources-title">Quellen</div>
+            <button class="sources-close" data-close-sources="1" aria-label="Schließen">✕</button>
+          </div>
+          <div class="sources-scroll">
+            <div class="sources-section-label">Standardquellen (immer aktiv)</div>
+            <div class="source-default">Anthropic · OpenAI · Google DeepMind · TechCrunch · The Verge · Euractiv · Hugging Face · VentureBeat</div>
+
+            <div class="sources-section-label">Eigene Quellen</div>
+            ${customHtml}
+
+            <div class="sources-section-label">Quelle hinzufügen</div>
+            <div class="add-source">
+              <input type="text" id="src-url" placeholder="Feed- oder Website-URL (z. B. heise.de/rss oder heise.de)" value="${esc(f.url)}">
+              <div class="add-row">
+                <input type="text" id="src-name" placeholder="Name (optional)" value="${esc(f.name)}">
+                <input type="text" id="src-cat" placeholder="Kategorie (optional)" value="${esc(f.category)}">
+              </div>
+              <label class="add-filter"><input type="checkbox" id="src-filter" ${f.filter ? 'checked' : ''}> Nur KI-relevante Artikel dieser Quelle</label>
+              ${this.sourceError ? `<div class="source-error">${esc(this.sourceError)}</div>` : ''}
+              <button class="add-btn" data-add-source="1" ${this.sourceBusy ? 'disabled' : ''}>${this.sourceBusy ? 'Feed wird gesucht…' : 'Hinzufügen'}</button>
+              <div class="source-hint">Es wird der RSS-/Atom-Feed der Seite gesucht — du kannst die Feed-URL direkt oder einfach die Website-Adresse eingeben. Seiten ganz ohne Feed lassen sich nicht hinzufügen. Änderungen greifen beim Schließen (neues Laden).</div>
+            </div>
+          </div>`;
+        el.classList.add('active');
+
+        el.querySelector('[data-close-sources]').addEventListener('click', () => this.closeSources());
+        el.querySelectorAll('[data-remove-idx]').forEach((b) =>
+          b.addEventListener('click', () => this.removeSource(parseInt(b.dataset.removeIdx))));
+        el.querySelectorAll('[data-filter-idx]').forEach((c) =>
+          c.addEventListener('change', () => this.toggleSourceFilter(parseInt(c.dataset.filterIdx))));
+        const addBtn = el.querySelector('[data-add-source]');
+        if (addBtn) addBtn.addEventListener('click', () => this.submitSource());
       }
     }
 
