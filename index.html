@@ -13,6 +13,8 @@
   <link rel="apple-touch-icon" sizes="167x167" href="icon-167-v3.png">
   <link rel="apple-touch-icon" sizes="120x120" href="icon-120-v3.png">
   <link rel="icon" type="image/png" sizes="32x32" href="icon-32-v3.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>DATENRADAR – KI-Briefing</title>
   <style>
     @font-face {
@@ -191,6 +193,70 @@
     .add-btn:disabled { opacity: .5; cursor: default; }
     .source-error { color: var(--accent); font-size: 0.76rem; }
     .source-hint { color: var(--ink-soft); font-size: 0.72rem; line-height: 1.5; }
+
+    /* Reiter im Einstellungsblatt */
+    .sheet-tabs { display: flex; gap: 6px; }
+    .sheet-tab {
+      font-family: 'Fundamental Brigade', sans-serif; font-size: 0.85rem;
+      background: none; border: 1px solid var(--rule); color: var(--ink-soft);
+      padding: 6px 12px; border-radius: 20px; cursor: pointer;
+    }
+    .sheet-tab.active { border-color: var(--ink); color: var(--ink); }
+
+    /* Mitteilungen */
+    .push-status { font-size: 0.8rem; line-height: 1.5; color: var(--ink-body); margin-top: 6px; }
+    .push-status.warn { color: var(--accent); }
+    .push-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+    .push-row-label { font-family: 'Fundamental Brigade', sans-serif; font-weight: 600; font-size: 0.95rem; }
+    .push-row-sub { font-size: 0.72rem; color: var(--ink-soft); margin-top: 2px; }
+    .push-field { padding: 10px 0 4px; }
+    .push-field-label { font-family: 'Fundamental Brigade', monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 7px; }
+    .push-body.off { opacity: .4; pointer-events: none; }
+    .switch { position: relative; width: 46px; height: 28px; flex-shrink: 0; }
+    .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 1; }
+    .switch span { position: absolute; inset: 0; border-radius: 14px; background: var(--rule); transition: background .2s; }
+    .switch span::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .2s; }
+    .switch input:checked + span { background: var(--accent); }
+    .switch input:checked + span::after { transform: translateX(18px); }
+    .switch input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      font-family: 'Fundamental Brigade', sans-serif; font-size: 0.78rem;
+      background: none; border: 1px solid var(--rule); color: var(--ink-soft);
+      padding: 6px 11px; border-radius: 20px; cursor: pointer; min-height: 32px;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .chip.on { border-color: var(--accent); color: var(--accent); background: var(--accent-wash); }
+    .chip-x { font-size: 0.8rem; opacity: .7; }
+    .time-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--rule); border-radius: 20px; padding: 2px 4px 2px 10px; }
+    .time-chip input, .push-time {
+      font-family: 'Fundamental Brigade', monospace; font-size: 0.85rem; color: var(--ink);
+      background: none; border: none; min-height: 30px;
+    }
+    .push-time { border: 1px solid var(--rule); border-radius: 8px; padding: 4px 8px; background: var(--surface); }
+    .time-chip button { background: none; border: none; color: var(--ink-soft); font-size: 0.85rem; padding: 4px 6px; cursor: pointer; }
+    .kw-add { display: flex; gap: 8px; margin-top: 8px; }
+    .kw-add input {
+      flex: 1; min-width: 0; font-family: 'Fundamental Brigade', monospace; font-size: 0.85rem;
+      background: var(--surface); border: 1px solid var(--rule); color: var(--ink); padding: 9px 10px; border-radius: 8px;
+    }
+    .push-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .push-actions .add-btn { flex: 1; min-width: 140px; }
+    .ghost-btn {
+      font-family: 'Fundamental Brigade', sans-serif; font-size: 0.85rem;
+      background: none; color: var(--ink); border: 1px solid var(--rule); padding: 11px; border-radius: 8px; cursor: pointer; flex: 1; min-width: 140px;
+    }
+    .push-saved { font-family: 'Fundamental Brigade', monospace; font-size: 0.62rem; letter-spacing: 0.1em; color: var(--ink-soft); text-transform: uppercase; min-height: 1em; margin-top: 10px; }
+    .copy-box { margin-top: 8px; font-family: 'Fundamental Brigade', monospace; font-size: 0.66rem; word-break: break-all; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 8px; color: var(--ink-body); }
+
+    .app-version { font-family: 'Fundamental Brigade', monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); text-align: center; margin: 28px 0 4px; }
+
+    /* Stand des Briefings über der Liste */
+    .feed-status {
+      font-family: 'Fundamental Brigade', monospace; font-size: 0.62rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--ink-soft); padding: 10px 16px 0;
+    }
+    .feed-status button { background: none; border: none; color: var(--accent); font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; padding: 0; }
 
     .feed {
       flex: 1;
@@ -492,9 +558,22 @@
   <div id="app"></div>
 
   <script>
+    // Bei jeder neuen Fassung hochzählen – angezeigt im Menü „＋ Quellen“, genutzt für den Update-Hinweis
+    const APP_VERSION = '1.0.2';
+
     class Depesche {
       constructor() {
-        this.API = 'https://depesche-backend-iota.vercel.app/api/articles';
+        this.BACKEND = 'https://depesche-backend-iota.vercel.app';
+        this.API = this.BACKEND + '/api/articles';
+        this.lastUpdate = null;
+        this.refreshing = false;
+        this.loadError = '';
+        this.sheetTab = 'sources';
+        this.push = {
+          support: null, status: null, busy: false, message: '', saved: '',
+          publicKey: null, sources: [],
+          settings: this.loadPushSettings(),
+        };
         this.articles = [];
         this.displayList = [];
         this.selectedArticle = null;
@@ -578,31 +657,167 @@
         if (this.selectedArticle !== null) this.renderDetail();
       }
 
+      // ---- Sicherheit: Texte aus fremden Feeds nie als HTML einsetzen -------------
+      esc(s) {
+        return (s == null ? '' : String(s))
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+
+      safeUrl(url) {
+        try {
+          const u = new URL(url);
+          return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : '';
+        } catch (e) { return ''; }
+      }
+
+      feedsPayload() {
+        return this.customFeeds.map((f) => ({ url: f.url, source: f.source, category: f.category, filter: !!f.filter }));
+      }
+
       async init() {
+        this.registerServiceWorker();
+        this.clearBadge();
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            this.clearBadge();
+            // Nach längerer Pause im Hintergrund still aktualisieren
+            if (!this.refreshing && this.lastUpdate && Date.now() - Date.parse(this.lastUpdate) > 30 * 60e3) this.loadArticles();
+            if (Date.now() - (this._lastUpdateCheck || 0) > 30 * 60e3) this.checkForUpdate();
+          }
+        });
+
+        // Letztes Briefing sofort zeigen, dann im Hintergrund aktualisieren
+        const cached = this.readBriefingCache();
+        if (cached) {
+          this.articles = cached.articles;
+          this.lastUpdate = cached.lastUpdate;
+          this.isLoading = false;
+        }
         this.renderList();
         await this.loadArticles();
+        this.checkForUpdate();
+      }
+
+      // Läuft die App schon länger im Hintergrund, merkt sie hier, dass eine neuere Fassung online ist
+      async checkForUpdate() {
+        this._lastUpdateCheck = Date.now();
+        try {
+          const html = await fetch('./index.html', { cache: 'no-store' }).then((r) => (r.ok ? r.text() : ''));
+          const m = /const APP_VERSION = '([^']+)'/.exec(html);
+          if (m && m[1] !== APP_VERSION) { this.updateAvailable = m[1]; this.renderStatus(); }
+        } catch (e) { /* offline – beim nächsten Mal */ }
+      }
+
+      readBriefingCache() {
+        try {
+          const c = JSON.parse(localStorage.getItem('depesche_briefing_cache') || 'null');
+          if (c && Array.isArray(c.articles) && c.articles.length && c.feeds === JSON.stringify(this.feedsPayload())) return c;
+        } catch (e) { /* ignorieren */ }
+        return null;
+      }
+
+      writeBriefingCache() {
+        try {
+          localStorage.setItem('depesche_briefing_cache', JSON.stringify({
+            articles: this.articles, lastUpdate: this.lastUpdate, feeds: JSON.stringify(this.feedsPayload()),
+          }));
+        } catch (e) { /* Speicher voll – nicht kritisch */ }
       }
 
       async loadArticles() {
+        this.refreshing = true;
+        this.loadError = '';
+        if (!this.isLoading) this.renderStatus();
+        const controller = new AbortController();
+        // Erstberechnung im Backend kann einige Minuten dauern; danach antwortet es sofort
+        const timer = setTimeout(() => controller.abort(), 290000);
         try {
           // Lade Meldungen vom Backend (kostenlose RSS-Kuration) inkl. eigener Quellen
           let url = this.API;
           if (this.customFeeds.length) {
-            const payload = this.customFeeds.map((f) => ({ url: f.url, source: f.source, category: f.category, filter: !!f.filter }));
-            url += '?feeds=' + encodeURIComponent(JSON.stringify(payload));
+            url += '?feeds=' + encodeURIComponent(JSON.stringify(this.feedsPayload()));
           }
-          const res = await fetch(url);
-          if (!res.ok) throw new Error('Backend nicht erreichbar: ' + res.status);
+          const res = await fetch(url, { signal: controller.signal });
+          if (!res.ok) throw new Error('Server antwortet mit ' + res.status);
           const data = await res.json();
-          this.articles = data.articles || [];
-          this.isLoading = false;
-          this.renderList();
+          if (Array.isArray(data.articles) && data.articles.length) {
+            this.articles = data.articles;
+            this.lastUpdate = data.lastUpdate || new Date().toISOString();
+            this.writeBriefingCache();
+          } else if (!this.articles.length) {
+            this.loadError = 'Keine Meldungen erhalten.';
+          }
         } catch (e) {
           console.error('Fehler beim Laden:', e.message);
-          this.articles = [];
+          this.loadError = e.name === 'AbortError' ? 'Zeitüberschreitung' : 'Keine Verbindung';
+        } finally {
+          clearTimeout(timer);
+          this.refreshing = false;
           this.isLoading = false;
           this.renderList();
+          this.openDeepLink();
         }
+      }
+
+      // Nur die Statuszeile aktualisieren (ohne die Liste neu aufzubauen)
+      renderStatus() {
+        const el = document.querySelector('.feed-status');
+        if (el) el.outerHTML = this.statusHtml();
+        this.bindStatus();
+      }
+
+      statusHtml() {
+        if (this.showSavedOnly || this.isLoading) return '';
+        let text = '';
+        if (this.lastUpdate) {
+          const d = new Date(this.lastUpdate);
+          const today = new Date().toDateString() === d.toDateString();
+          text = 'Stand ' + (today ? '' : d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) + ', ')
+            + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        }
+        if (this.updateAvailable) text += (text ? ' · ' : '') + `Version ${this.esc(this.updateAvailable)} da · <button data-reload="1">jetzt laden</button>`;
+        if (this.refreshing) text += (text ? ' · ' : '') + 'aktualisiere…';
+        else if (this.loadError) text += (text ? ' · ' : '') + this.esc(this.loadError) + ' · <button data-retry="1">erneut laden</button>';
+        return text ? `<div class="feed-status" role="status">${text}</div>` : '';
+      }
+
+      bindStatus() {
+        document.querySelectorAll('[data-retry]').forEach((b) => b.addEventListener('click', () => this.loadArticles()));
+        document.querySelectorAll('[data-reload]').forEach((b) => b.addEventListener('click', () => location.reload()));
+      }
+
+      // Aus einer Mitteilung geöffnet (?a=<id>): passenden Artikel direkt zeigen
+      openDeepLink(target) {
+        let id = null;
+        try {
+          const u = new URL(target || location.href);
+          id = u.searchParams.get('a');
+          if (!target && (u.searchParams.has('a') || u.searchParams.has('src'))) {
+            history.replaceState(null, '', location.pathname);
+          }
+        } catch (e) { return; }
+        if (!id) return;
+        const idx = this.articles.findIndex((a) => a.id === id);
+        if (idx < 0) return;
+        this.showSavedOnly = false;
+        this.renderList();
+        this.selectArticle(idx);
+      }
+
+      registerServiceWorker() {
+        if (!('serviceWorker' in navigator)) return;
+        navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service Worker:', e.message));
+        navigator.serviceWorker.addEventListener('message', (e) => {
+          if (e.data && e.data.type === 'open') {
+            this.clearBadge();
+            if (this.articles.length) this.openDeepLink(e.data.url);
+          }
+        });
+      }
+
+      clearBadge() {
+        try { if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {}); } catch (e) { /* nicht unterstützt */ }
       }
 
       selectArticle(index) {
@@ -1030,16 +1245,16 @@
               <button class="detail-back">← Zurück</button>
               <button class="detail-save${isSaved ? ' is-saved' : ''}" data-save-detail="1">${isSaved ? '★ Gemerkt' : '☆ Merken'}</button>
             </div>
-            <h1 class="detail-headline">${article.headline}</h1>
-            <div class="detail-meta"><span class="detail-source">${article.source || 'Quelle'}</span> · ${article.date || 'Datum'}</div>
+            <h1 class="detail-headline">${this.esc(article.headline)}</h1>
+            <div class="detail-meta"><span class="detail-source">${this.esc(article.source || 'Quelle')}</span> · ${this.esc(article.date || 'Datum')}</div>
           </div>
           <div class="detail-scroll">
             <div class="detail-content">
-              ${article.content ? article.content.split('\n').map(p => `<p>${p}</p>`).join('') : '<p>' + article.summary + '</p>'}
+              ${article.content ? article.content.split('\n').filter(Boolean).map(p => `<p>${this.esc(p)}</p>`).join('') : '<p>' + this.esc(article.summary) + '</p>'}
               <div class="detail-fazit">
                 <div class="detail-fazit-label">Weiterlesen</div>
                 <div class="detail-fazit-text">
-                  ${article.link ? `<a href="${article.link}" target="_blank" style="color: var(--accent);">Zum Originalartikel bei ${article.source} →</a>` : 'Quelle: ' + article.source}
+                  ${this.safeUrl(article.link) ? `<a href="${this.esc(this.safeUrl(article.link))}" target="_blank" rel="noopener noreferrer" style="color: var(--accent);">Zum Originalartikel bei ${this.esc(article.source)} →</a>` : 'Quelle: ' + this.esc(article.source)}
                 </div>
               </div>
             </div>
@@ -1095,12 +1310,12 @@
             <div class="article-item${isTop ? ' is-top' : ''}" data-index="${i}">
               <button class="bookmark-btn${saved ? ' is-saved' : ''}" data-save="${i}" aria-label="Merken">${saved ? '★' : '☆'}</button>
               ${isTop ? '<span class="top-badge">Top</span>' : ''}
-              <div class="article-headline">${article.headline}</div>
-              <div class="article-summary">${article.summary}</div>
-              <div class="article-meta"><span class="article-source">${article.source || 'Quelle'}</span> · ${article.date || 'Datum'}</div>
+              <div class="article-headline">${this.esc(article.headline)}</div>
+              <div class="article-summary">${this.esc(article.summary)}</div>
+              <div class="article-meta"><span class="article-source">${this.esc(article.source || 'Quelle')}</span> · ${this.esc(article.date || 'Datum')}</div>
             </div>
           `;}).join('')
-          : `<div class="empty">${this.showSavedOnly ? 'Noch keine gemerkten Artikel.' : 'Keine Meldungen verfügbar. Bitte später versuchen.'}</div>`;
+          : `<div class="empty">${this.showSavedOnly ? 'Noch keine gemerkten Artikel.' : (this.refreshing ? 'Meldungen werden geladen…' : 'Keine Meldungen verfügbar.') + (this.loadError && !this.showSavedOnly ? '<br><br><button class="filter-toggle" data-retry="1">Erneut laden</button>' : '')}</div>`;
 
         listEl.innerHTML = `
           <div class="header">
@@ -1115,12 +1330,13 @@
               </div>
             </div>
           </div>
-          <div class="feed">${feedHtml}</div>
+          <div class="feed">${this.statusHtml()}${feedHtml}</div>
         `;
 
         if (this.isLoading) {
           this.positionLoadingAnimation(listEl);
         }
+        this.bindStatus();
 
         this.alignTitleToSubtitle(listEl);
 
@@ -1169,9 +1385,11 @@
         this.renderSources();
         if (this.feedsChanged) {
           this.feedsChanged = false;
-          this.isLoading = true;
+          this.isLoading = !this.readBriefingCache();
+          if (!this.isLoading) { const c = this.readBriefingCache(); this.articles = c.articles; this.lastUpdate = c.lastUpdate; }
           this.renderList();
           this.loadArticles();
+          if (this.pushEndpoint()) this.savePushSettings();
         }
       }
 
@@ -1242,9 +1460,12 @@
         if (!el) return;
         if (!this.showSources) { el.classList.remove('active'); return; }
 
-        const esc = (s) => (s || '').toString()
-          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const esc = (s) => this.esc(s);
         const f = this.form || { url: '', name: '', category: '', filter: false };
+        const tab = this.sheetTab;
+        const prevScroll = el.classList.contains('active') && this._renderedTab === tab && el.querySelector('.sources-scroll')
+          ? el.querySelector('.sources-scroll').scrollTop : 0;
+        this._renderedTab = tab;
 
         const customHtml = this.customFeeds.length
           ? this.customFeeds.map((s, i) => `
@@ -1259,14 +1480,9 @@
               </div>`).join('')
           : '<div class="source-hint">Noch keine eigenen Quellen. Füge unten eine hinzu.</div>';
 
-        el.innerHTML = `
-          <div class="sources-header">
-            <div class="sources-title">Quellen</div>
-            <button class="sources-close" data-close-sources="1" aria-label="Schließen">✕</button>
-          </div>
-          <div class="sources-scroll">
+        const sourcesHtml = `
             <div class="sources-section-label">Standardquellen (immer aktiv)</div>
-            <div class="source-default">Anthropic · OpenAI · Google DeepMind · TechCrunch · The Verge · Euractiv · Hugging Face · VentureBeat</div>
+            <div class="source-default">${esc((this.push.sources.length ? this.push.sources : ['Anthropic', 'OpenAI', 'Google DeepMind', 'TechCrunch', 'The Verge', 'Euractiv', 'Hugging Face', 'The Decoder']).join(' · '))}</div>
 
             <div class="sources-section-label">Eigene Quellen</div>
             ${customHtml}
@@ -1282,17 +1498,395 @@
               ${this.sourceError ? `<div class="source-error">${esc(this.sourceError)}</div>` : ''}
               <button class="add-btn" data-add-source="1" ${this.sourceBusy ? 'disabled' : ''}>${this.sourceBusy ? 'Feed wird gesucht…' : 'Hinzufügen'}</button>
               <div class="source-hint">Es wird der RSS-/Atom-Feed der Seite gesucht — du kannst die Feed-URL direkt oder einfach die Website-Adresse eingeben. Seiten ganz ohne Feed lassen sich nicht hinzufügen. Änderungen greifen beim Schließen (neues Laden).</div>
+            </div>`;
+
+        el.innerHTML = `
+          <div class="sources-header">
+            <div class="sheet-tabs" role="tablist">
+              <button class="sheet-tab${tab === 'sources' ? ' active' : ''}" role="tab" aria-selected="${tab === 'sources'}" data-tab="sources">Quellen</button>
+              <button class="sheet-tab${tab === 'push' ? ' active' : ''}" role="tab" aria-selected="${tab === 'push'}" data-tab="push">Mitteilungen</button>
             </div>
+            <button class="sources-close" data-close-sources="1" aria-label="Schließen">✕</button>
+          </div>
+          <div class="sources-scroll">${tab === 'push' ? this.pushHtml() : sourcesHtml}
+            <div class="app-version">DATENRADAR · Version ${APP_VERSION}</div>
           </div>`;
         el.classList.add('active');
+        if (prevScroll) el.querySelector('.sources-scroll').scrollTop = prevScroll;
 
         el.querySelector('[data-close-sources]').addEventListener('click', () => this.closeSources());
+        el.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
+          if (this.sheetTab === 'sources') this.captureForm();
+          this.sheetTab = b.dataset.tab;
+          this.renderSources();
+          if (this.sheetTab === 'push') this.refreshPushStatus();
+        }));
+        if (tab === 'push') { this.bindPush(el); return; }
+
         el.querySelectorAll('[data-remove-idx]').forEach((b) =>
           b.addEventListener('click', () => this.removeSource(parseInt(b.dataset.removeIdx))));
         el.querySelectorAll('[data-filter-idx]').forEach((c) =>
           c.addEventListener('change', () => this.toggleSourceFilter(parseInt(c.dataset.filterIdx))));
         const addBtn = el.querySelector('[data-add-source]');
         if (addBtn) addBtn.addEventListener('click', () => this.submitSource());
+      }
+
+      // ==== Mitteilungen ========================================================
+      defaultPushSettings() {
+        let tz = 'Europe/Berlin';
+        try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch (e) { /* Standard */ }
+        return {
+          tz,
+          briefing: { enabled: true, times: ['07:30'], days: [1, 2, 3, 4, 5], count: 3 },
+          breaking: { enabled: false, keywords: [], sources: [], quietFrom: '22:00', quietTo: '07:00', maxPerDay: 6 },
+        };
+      }
+
+      loadPushSettings() {
+        const d = this.defaultPushSettings();
+        try {
+          const s = JSON.parse(localStorage.getItem('depesche_push_settings') || 'null');
+          if (s && s.briefing && s.breaking) {
+            return { ...d, ...s, tz: d.tz, briefing: { ...d.briefing, ...s.briefing }, breaking: { ...d.breaking, ...s.breaking } };
+          }
+        } catch (e) { /* Standard */ }
+        return d;
+      }
+
+      pushEndpoint() { return localStorage.getItem('depesche_push_endpoint') || ''; }
+
+      isIOS() {
+        return /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      }
+
+      isStandalone() {
+        return window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+      }
+
+      pushSupport() {
+        if (this.isIOS() && !this.isStandalone()) return 'homescreen';
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'unsupported';
+        if (Notification.permission === 'denied') return 'denied';
+        return 'ok';
+      }
+
+      async pushApi(body) {
+        const res = await fetch(this.BACKEND + '/api/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        return res.json();
+      }
+
+      async refreshPushStatus() {
+        this.push.support = this.pushSupport();
+        try {
+          if (!this.push.publicKey) {
+            const k = await fetch(this.BACKEND + '/api/push?action=key').then((r) => r.json());
+            this.push.publicKey = k.publicKey || null;
+            this.push.backend = k.configured || null;
+            if (Array.isArray(k.sources)) this.push.sources = k.sources;
+            if (!k.ok) this.push.message = k.error || 'Backend für Mitteilungen ist noch nicht eingerichtet.';
+          }
+          // Sicherstellen, dass das gespeicherte Abo noch zum Gerät passt
+          let endpoint = this.pushEndpoint();
+          if (this.push.support === 'ok' && endpoint) {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.getSubscription();
+            if (!sub) { localStorage.removeItem('depesche_push_endpoint'); endpoint = ''; }
+          }
+          if (endpoint && this.push.publicKey) {
+            const st = await this.pushApi({ action: 'status', endpoint });
+            this.push.status = st;
+            if (st && st.subscribed && st.settings) {
+              this.push.settings = { ...this.push.settings, ...st.settings, tz: this.push.settings.tz };
+            } else if (st && st.ok && !st.subscribed) {
+              localStorage.removeItem('depesche_push_endpoint');
+            }
+          } else {
+            this.push.status = null;
+          }
+        } catch (e) {
+          this.push.message = 'Server nicht erreichbar.';
+        }
+        if (this.showSources && this.sheetTab === 'push') this.renderSources();
+      }
+
+      urlB64ToUint8Array(base64) {
+        const pad = '='.repeat((4 - (base64.length % 4)) % 4);
+        const raw = atob((base64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+        return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+      }
+
+      pushPayloadSettings() {
+        return { ...this.push.settings, feeds: this.feedsPayload() };
+      }
+
+      // Muss direkt aus dem Tippen heraus starten – iOS fragt die Erlaubnis nur dann ab
+      async enablePush() {
+        if (this.push.busy) return;
+        this.push.busy = true;
+        this.push.message = '';
+        this.renderSources();
+        try {
+          const permission = await Notification.requestPermission();
+          if (permission !== 'granted') {
+            this.push.message = permission === 'denied'
+              ? 'Mitteilungen wurden abgelehnt. Erlauben kannst du sie in den iPhone-Einstellungen unter Mitteilungen → DATENRADAR.'
+              : 'Ohne Erlaubnis können keine Mitteilungen gesendet werden.';
+            return;
+          }
+          if (!this.push.publicKey) {
+            const k = await fetch(this.BACKEND + '/api/push?action=key').then((r) => r.json());
+            if (!k.ok) { this.push.message = k.error || 'Backend nicht eingerichtet.'; return; }
+            this.push.publicKey = k.publicKey;
+          }
+          const reg = await navigator.serviceWorker.ready;
+          let sub = await reg.pushManager.getSubscription();
+          if (!sub) {
+            sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: this.urlB64ToUint8Array(this.push.publicKey) });
+          }
+          const st = await this.pushApi({
+            action: 'subscribe', subscription: sub.toJSON(), settings: this.pushPayloadSettings(), origin: location.origin,
+          });
+          if (!st.ok) { this.push.message = st.error || 'Anmeldung fehlgeschlagen.'; return; }
+          localStorage.setItem('depesche_push_endpoint', sub.endpoint);
+          this.push.status = st;
+          this.push.message = 'Mitteilungen sind aktiv. Tipp auf „Test senden", um es auszuprobieren.';
+        } catch (e) {
+          this.push.message = 'Aktivieren fehlgeschlagen: ' + e.message;
+        } finally {
+          this.push.busy = false;
+          this.push.support = this.pushSupport();
+          this.renderSources();
+        }
+      }
+
+      async disablePush() {
+        this.push.busy = true;
+        this.renderSources();
+        try {
+          const endpoint = this.pushEndpoint();
+          if (endpoint) await this.pushApi({ action: 'unsubscribe', endpoint }).catch(() => {});
+          const reg = await navigator.serviceWorker.ready;
+          const sub = await reg.pushManager.getSubscription();
+          if (sub) await sub.unsubscribe();
+        } catch (e) { /* trotzdem lokal abmelden */ }
+        localStorage.removeItem('depesche_push_endpoint');
+        this.push.status = null;
+        this.push.busy = false;
+        this.push.message = 'Mitteilungen auf diesem Gerät ausgeschaltet.';
+        this.renderSources();
+      }
+
+      async sendTestPush() {
+        this.push.busy = true;
+        this.push.message = 'Test wird gesendet…';
+        this.renderSources();
+        try {
+          const r = await this.pushApi({ action: 'test', endpoint: this.pushEndpoint() });
+          this.push.message = r.ok
+            ? 'Test gesendet – die Mitteilung sollte gleich erscheinen.'
+            : 'Test fehlgeschlagen' + (r.status ? ' (' + r.status + ')' : '') + (r.error ? ': ' + r.error : '');
+          if (r.removed) { localStorage.removeItem('depesche_push_endpoint'); this.push.status = null; }
+        } catch (e) {
+          this.push.message = 'Test fehlgeschlagen: ' + e.message;
+        }
+        this.push.busy = false;
+        this.renderSources();
+      }
+
+      // Einstellungen lokal merken und (verzögert) an das Backend senden
+      savePushSettings({ rerender = false } = {}) {
+        localStorage.setItem('depesche_push_settings', JSON.stringify(this.push.settings));
+        if (rerender) this.renderSources();
+        const endpoint = this.pushEndpoint();
+        if (!endpoint) return;
+        clearTimeout(this._pushSaveTimer);
+        this._pushSaveTimer = setTimeout(async () => {
+          try {
+            const st = await this.pushApi({ action: 'settings', endpoint, settings: this.pushPayloadSettings() });
+            if (st && st.ok) { this.push.status = st; this.flashSaved('Gespeichert'); }
+            else this.flashSaved('Nicht gespeichert');
+          } catch (e) { this.flashSaved('Nicht gespeichert – offline?'); }
+        }, 600);
+      }
+
+      flashSaved(text) {
+        const el = document.querySelector('.push-saved');
+        if (!el) return;
+        el.textContent = text;
+        clearTimeout(this._flashTimer);
+        this._flashTimer = setTimeout(() => { if (el.isConnected) el.textContent = ''; }, 2200);
+      }
+
+      pushHtml() {
+        const esc = (s) => this.esc(s);
+        const p = this.push;
+        const s = p.settings;
+        const support = p.support || this.pushSupport();
+        const active = !!(p.status && p.status.subscribed && this.pushEndpoint());
+        const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+        const sources = p.sources.length ? p.sources : ['Anthropic', 'OpenAI', 'Google DeepMind', 'TechCrunch', 'The Verge', 'Euractiv', 'Hugging Face', 'The Decoder'];
+        const allSources = [...new Set([...sources, ...this.customFeeds.map((f) => f.source)])];
+
+        let head = '';
+        if (support === 'homescreen') {
+          head = `<div class="push-status warn">Auf dem iPhone gibt es Mitteilungen nur für Apps auf dem Home-Bildschirm. In Safari: Teilen → „Zum Home-Bildschirm", dann DATENRADAR von dort öffnen.</div>`;
+        } else if (support === 'unsupported') {
+          head = `<div class="push-status warn">Dieser Browser unterstützt keine Web-Mitteilungen.</div>`;
+        } else if (support === 'denied') {
+          head = `<div class="push-status warn">Mitteilungen sind für DATENRADAR blockiert. Freigeben: iPhone-Einstellungen → Mitteilungen → DATENRADAR.</div>`;
+        } else if (p.backend && !p.backend.redis) {
+          head = `<div class="push-status warn">Das Backend hat noch keinen Speicher (Upstash Redis). Ohne ihn kann es Mitteilungen nicht verschicken.</div>`;
+        } else if (active) {
+          const last = p.status.lastSentAt ? new Date(p.status.lastSentAt).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+          head = `<div class="push-status">Aktiv auf diesem Gerät${last ? ' · zuletzt gesendet ' + esc(last) : ''}.${p.status.lastError ? ' Letzter Fehler: ' + esc(p.status.lastError) : ''}</div>`;
+          if (p.status.schedule && !p.status.schedule.ok) {
+            head += `<div class="push-status warn">Zeitplan konnte nicht angelegt werden: ${esc(p.status.schedule.error || '')}</div>`;
+          }
+          if (p.status.dispatchUrl) {
+            head += `<div class="push-status warn">Es fehlt noch ein Zeitplan, der alle 10 Minuten nachsieht. Empfohlen: Upstash QStash mit dem Backend verbinden. Alternativ diese Adresse bei einem Zeitplan-Dienst (z. B. cron-job.org) alle 10 Minuten aufrufen lassen:</div>
+              <div class="copy-box">${esc(p.status.dispatchUrl)}</div>`;
+          }
+        } else {
+          head = `<div class="push-status">Lege fest, wann und worüber DATENRADAR dich benachrichtigt, und aktiviere die Mitteilungen dann für dieses Gerät.</div>`;
+        }
+        if (p.message) head += `<div class="push-status${/fehl|abgelehnt|nicht|blockiert/i.test(p.message) ? ' warn' : ''}">${esc(p.message)}</div>`;
+
+        const times = s.briefing.times.map((t, i) => `
+          <span class="time-chip"><input type="time" value="${esc(t)}" data-time-idx="${i}" aria-label="Uhrzeit ${i + 1}">${s.briefing.times.length > 1 ? `<button data-time-del="${i}" aria-label="Uhrzeit entfernen">✕</button>` : ''}</span>`).join('');
+
+        return `
+          ${head}
+
+          <div class="sources-section-label">Tägliches Briefing</div>
+          <div class="push-row">
+            <div><div class="push-row-label">Briefing</div><div class="push-row-sub">Die neuesten Schlagzeilen zu festen Uhrzeiten</div></div>
+            <label class="switch"><input type="checkbox" data-pset="briefing.enabled" ${s.briefing.enabled ? 'checked' : ''} aria-label="Briefing"><span></span></label>
+          </div>
+          <div class="push-body${s.briefing.enabled ? '' : ' off'}">
+            <div class="push-field">
+              <div class="push-field-label">Uhrzeiten</div>
+              <div class="chips">${times}${s.briefing.times.length < 4 ? '<button class="chip" data-time-add="1">＋ Uhrzeit</button>' : ''}</div>
+            </div>
+            <div class="push-field">
+              <div class="push-field-label">Tage</div>
+              <div class="chips">${days.map((d, i) => `<button class="chip${s.briefing.days.includes(i + 1) ? ' on' : ''}" data-day="${i + 1}" aria-pressed="${s.briefing.days.includes(i + 1)}">${d}</button>`).join('')}</div>
+            </div>
+            <div class="push-field">
+              <div class="push-field-label">Schlagzeilen pro Briefing</div>
+              <div class="chips">${[1, 2, 3, 4, 5].map((n) => `<button class="chip${s.briefing.count === n ? ' on' : ''}" data-count="${n}" aria-pressed="${s.briefing.count === n}">${n}</button>`).join('')}</div>
+            </div>
+          </div>
+
+          <div class="sources-section-label">Eilmeldungen</div>
+          <div class="push-row">
+            <div><div class="push-row-label">Schlagwort-Alarm</div><div class="push-row-sub">Sofort melden, wenn ein neuer Artikel eines deiner Schlagwörter enthält</div></div>
+            <label class="switch"><input type="checkbox" data-pset="breaking.enabled" ${s.breaking.enabled ? 'checked' : ''} aria-label="Eilmeldungen"><span></span></label>
+          </div>
+          <div class="push-body${s.breaking.enabled ? '' : ' off'}">
+            <div class="push-field">
+              <div class="push-field-label">Schlagwörter</div>
+              <div class="chips">${s.breaking.keywords.map((k, i) => `<button class="chip on" data-kw-del="${i}" aria-label="${esc(k)} entfernen">${esc(k)} <span class="chip-x">✕</span></button>`).join('') || '<span class="source-hint">Noch keine – ohne Schlagwort keine Eilmeldungen.</span>'}</div>
+              <div class="kw-add"><input type="text" id="kw-input" placeholder="z. B. Claude, AI Act, Mistral" enterkeyhint="done" autocapitalize="off"><button class="chip" data-kw-add="1">＋</button></div>
+            </div>
+            <div class="push-field">
+              <div class="push-field-label">Nur aus diesen Quellen (keine Auswahl = alle)</div>
+              <div class="chips">${allSources.map((src) => `<button class="chip${s.breaking.sources.includes(src) ? ' on' : ''}" data-src="${esc(src)}" aria-pressed="${s.breaking.sources.includes(src)}">${esc(src)}</button>`).join('')}</div>
+            </div>
+            <div class="push-field">
+              <div class="push-field-label">Ruhezeit</div>
+              <div class="chips" style="align-items:center">von <input class="push-time" type="time" data-quiet="quietFrom" value="${esc(s.breaking.quietFrom)}"> bis <input class="push-time" type="time" data-quiet="quietTo" value="${esc(s.breaking.quietTo)}"></div>
+            </div>
+            <div class="push-field">
+              <div class="push-field-label">Höchstens pro Tag</div>
+              <div class="chips">${[3, 6, 10].map((n) => `<button class="chip${s.breaking.maxPerDay === n ? ' on' : ''}" data-max="${n}" aria-pressed="${s.breaking.maxPerDay === n}">${n}</button>`).join('')}</div>
+            </div>
+          </div>
+
+          <div class="push-actions">
+            ${active
+              ? `<button class="add-btn" data-push-test="1" ${p.busy ? 'disabled' : ''}>Test senden</button>
+                 <button class="ghost-btn" data-push-off="1" ${p.busy ? 'disabled' : ''}>Ausschalten</button>`
+              : `<button class="add-btn" data-push-on="1" ${p.busy || support !== 'ok' ? 'disabled' : ''}>${p.busy ? 'Wird aktiviert…' : 'Mitteilungen aktivieren'}</button>`}
+          </div>
+          <div class="push-saved" aria-live="polite"></div>
+          <div class="source-hint" style="margin-top:6px">Zeitzone: ${esc(s.tz)}. Das Briefing kommt bis zu 10 Minuten nach der gewählten Uhrzeit.</div>`;
+      }
+
+      bindPush(el) {
+        const s = this.push.settings;
+        el.querySelectorAll('[data-pset]').forEach((c) => c.addEventListener('change', () => {
+          const [grp, key] = c.dataset.pset.split('.');
+          s[grp][key] = c.checked;
+          this.savePushSettings({ rerender: true });
+        }));
+        el.querySelectorAll('[data-time-idx]').forEach((inp) => inp.addEventListener('change', () => {
+          if (!/^\d{2}:\d{2}$/.test(inp.value)) return;
+          s.briefing.times[parseInt(inp.dataset.timeIdx)] = inp.value;
+          s.briefing.times = [...new Set(s.briefing.times)].sort();
+          this.savePushSettings();
+        }));
+        el.querySelectorAll('[data-time-del]').forEach((b) => b.addEventListener('click', () => {
+          s.briefing.times.splice(parseInt(b.dataset.timeDel), 1);
+          this.savePushSettings({ rerender: true });
+        }));
+        const addTime = el.querySelector('[data-time-add]');
+        if (addTime) addTime.addEventListener('click', () => {
+          const candidates = ['18:00', '12:30', '21:00', '09:00'];
+          const t = candidates.find((c) => !s.briefing.times.includes(c)) || '12:00';
+          s.briefing.times = [...new Set([...s.briefing.times, t])].sort();
+          this.savePushSettings({ rerender: true });
+        });
+        el.querySelectorAll('[data-day]').forEach((b) => b.addEventListener('click', () => {
+          const d = parseInt(b.dataset.day);
+          const set = new Set(s.briefing.days);
+          if (set.has(d)) { if (set.size > 1) set.delete(d); } else set.add(d);
+          s.briefing.days = [...set].sort();
+          this.savePushSettings({ rerender: true });
+        }));
+        el.querySelectorAll('[data-count]').forEach((b) => b.addEventListener('click', () => {
+          s.briefing.count = parseInt(b.dataset.count);
+          this.savePushSettings({ rerender: true });
+        }));
+        const kwInput = el.querySelector('#kw-input');
+        const addKw = () => {
+          const parts = (kwInput.value || '').split(',').map((x) => x.trim()).filter(Boolean);
+          if (!parts.length) return;
+          parts.forEach((k) => { if (!s.breaking.keywords.some((x) => x.toLowerCase() === k.toLowerCase())) s.breaking.keywords.push(k.slice(0, 40)); });
+          s.breaking.keywords = s.breaking.keywords.slice(0, 15);
+          this.savePushSettings({ rerender: true });
+          const again = document.querySelector('#kw-input');
+          if (again) again.focus();
+        };
+        if (kwInput) kwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addKw(); } });
+        const kwBtn = el.querySelector('[data-kw-add]');
+        if (kwBtn) kwBtn.addEventListener('click', addKw);
+        el.querySelectorAll('[data-kw-del]').forEach((b) => b.addEventListener('click', () => {
+          s.breaking.keywords.splice(parseInt(b.dataset.kwDel), 1);
+          this.savePushSettings({ rerender: true });
+        }));
+        el.querySelectorAll('[data-src]').forEach((b) => b.addEventListener('click', () => {
+          const src = b.dataset.src;
+          s.breaking.sources = s.breaking.sources.includes(src) ? s.breaking.sources.filter((x) => x !== src) : [...s.breaking.sources, src];
+          this.savePushSettings({ rerender: true });
+        }));
+        el.querySelectorAll('[data-quiet]').forEach((inp) => inp.addEventListener('change', () => {
+          s.breaking[inp.dataset.quiet] = /^\d{2}:\d{2}$/.test(inp.value) ? inp.value : '';
+          this.savePushSettings();
+        }));
+        el.querySelectorAll('[data-max]').forEach((b) => b.addEventListener('click', () => {
+          s.breaking.maxPerDay = parseInt(b.dataset.max);
+          this.savePushSettings({ rerender: true });
+        }));
+        const on = el.querySelector('[data-push-on]');
+        if (on) on.addEventListener('click', () => this.enablePush());
+        const off = el.querySelector('[data-push-off]');
+        if (off) off.addEventListener('click', () => this.disablePush());
+        const test = el.querySelector('[data-push-test]');
+        if (test) test.addEventListener('click', () => this.sendTestPush());
       }
     }
 
